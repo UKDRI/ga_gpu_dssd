@@ -1,119 +1,124 @@
+#+title: GPU-Accelerated Subgroup Discovery (Genetic Algorithm)
+#+author: Sam Neaves
+#+date: <2025-10-30>
+#+options: toc:2 num:nil
+#+property: header-args :eval never-export
 
+* Project Goal
 
-* GPU-Accelerated Subgroup Set Discovery (Genetic Algorithm)
+This project uses a parallel Genetic Algorithm (GA) to discover statistically significant, interpretable rule sets (subgroups) from high-dimensional single-cell RNA-seq data.  
+The goal is to identify combinations of gene expression states (e.g., =Gene A = 1 AND Gene B = 0=) that are strongly associated with the Parkinson's disease (PD) phenotype.
 
-1. Project Goal
+The analysis runs on the *DAWN HPC*, utilizing its *Intel PVC GPUs* for accelerated computation.
 
-This project uses a parallel Genetic Algorithm (GA) to discover statistically significant, interpretable rule sets (subgroups) from high-dimensional single-cell RNA-seq data. The goal is to identify combinations of gene expression states (e.g., "Gene A = 1 AND Gene B = 0") that are strongly associated with the Parkinson's disease (PD) phenotype.
+* Statistical Method: "Best-of-N-Repeats" Permutation Test
 
-The analysis runs on the DAWN HPC, utilizing its Intel PVC GPUs for accelerated computation.
+To ensure our results are statistically significant and not random artifacts, we use a rigorous permutation test.
 
-2. Statistical Method: "Best-of-N-Repeats" Permutation Test
+** The Problem
+A single GA run can get stuck in a *local optimum* (a good-but-not-great result).  
+If we run the GA 100 times on the real data but only once on the permuted data, it’s an unfair comparison.
 
-To ensure our results are statistically significant and not just a random artifact, we use a rigorous permutation test.
+** The Solution
+We apply the *exact same computational effort* to the real data as to each of the 999 permuted datasets.
 
-The Problem: A single GA run can get stuck in a "local optimum" (a good-but-not-great result). If we run the GA 100 times on the real data but only once on the permuted data, it's an unfair comparison.
+** Our Method
+1. Create 1000 datasets (1 real, 999 permuted).  
+2. For each dataset, run the GA =num_repeats= times (e.g., 200 times) from different random starting points.  
+3. Record the *single best fitness score* from those 200 repeats.  
+4. This yields one "best-of-200" score for the real data and 999 "best-of-200" scores for the permuted data.  
+5. The *p-value* is computed by comparing the real score to the distribution of the permuted scores.
 
-The Solution: We apply the exact same computational effort to the real data as we do to each of the 999 permuted datasets.
+* File Descriptions
 
-Our Method:
+| File                  | Description                                                                                  |
+|------------------------+----------------------------------------------------------------------------------------------|
+| =submit_ga.sh=         | Main run script. Creates output dirs and submits jobs to SLURM.                             |
+| =run_ga_array.slurm=   | Internal SLURM job array script (=--array=0-999=). Sets up modules for each job.            |
+| =simple_ga_array.py=   | Core Python GA worker. One instance runs per task.                                          |
+| =gather_results.py=    | Post-processing analysis script to compute p-values and summary statistics.                 |
+| =sc_data/=             | Directory containing input data (=X_binary.csv=, =y_labels.csv=).                           |
 
-We create 1000 datasets (1 real, 999 permuted).
+** Task Breakdown
+- *Task 0:* Loads the real data, runs GA =num_repeats= times, saves best result to =ga_results_0.txt=  
+- *Tasks 1–999:* Each loads a permuted dataset, runs GA =num_repeats= times, and saves best result to =ga_results_X.txt=
 
-For each dataset, we run the GA num_repeats times (e.g., 200 times) from different random starting points.
+* Key Parameters (Inside =simple_ga_array.py=)
 
-We find the single best fitness score from those 200 repeats.
+#+begin_src python
+# Main GA configuration
+num_repeats = 200                # Number of GA runs per permutation (Best-of-N)
+num_generations = 1000           # Generations per GA run
+population_size = 55             # Max population fitting in GPU memory
+gene_inclusion_probability = 0.01  # Controls sparsity (~10 genes per rule)
+#+end_src
 
-This gives us one "best-of-200" score for the real data and 999 "best-of-200" scores for the permuted data.
+* How to Run the Full Experiment (10,000 GPU-hours)
 
-The p-value is calculated by comparing the real score to the distribution of the 999 permuted scores.
+** Step 1: Clean Up & Prepare
+Ensure your scripts (=submit_ga.sh=, =run_ga_array.slurm=, =simple_ga_array.py=, =gather_results.py=)  
+are in your main directory: =/home/dn-neav1/gpu_ga=
 
-3. File Descriptions
-
-submit_ga.sh: (Your "Run" script) This is the main script you use to submit a job. It creates the output directories and passes all parameters (like walltime) to SLURM.
-
-run_ga_array.slurm: (Internal SLURM script) This script is called by submit_ga.sh. It defines the 1000-task job array (--array=0-999) and sets up the modules for each job.
-
-simple_ga_array.py: (The "Worker" script) This is the core Python code. A copy of this script is run for each of the 1000 tasks.
-
-Task 0: Loads the real data. Runs the GA num_repeats times (e.g., 200) and saves the single best result to ga_results_0.txt.
-
-Tasks 1-999: Each loads one permuted dataset. Runs the GA num_repeats times and saves its single best result to ga_results_X.txt.
-
-gather_results.py: (The "Analysis" script) After all 1000 jobs are done, you run this on the login node. It reads all 1000 ga_results_*.txt files and calculates the final p-value and statistics.
-
-sc_data/: Directory containing the input data (X_binary.csv, y_labels.csv).
-
-4. Key Parameters (Inside simple_ga_array.py)
-
-These are the main settings that define the search. They are set in the simple_ga_array.py script.
-
-num_repeats = 200: The number of times to run the GA for each permutation. (This is our "Best-of-N" value).
-
-num_generations = 1000: The number of generations for each GA run.
-
-population_size = 55: The population size for each GA run. This is set to the maximum that fits in GPU memory.
-
-gene_inclusion_probability = 0.01: Controls the sparsity of rules (aims for ~10 genes per rule).
-
-5. How to Run the Full Experiment (10,000 GPU-hours)
-
-Step 1: Clean Up & Prepare
-
-Ensure your scripts (submit_ga.sh, run_ga_array.slurm, simple_ga_array.py, gather_results.py) are in your main directory (/home/dn-neav1/gpu_ga).
-
-# Clean up any old files from previous test runs
+#+begin_src bash
+# Clean up previous runs
 rm -f slurm-*.out
 rm -f ga_results_*.txt
 rm -rf ga_run_*
+#+end_src
 
+** Step 2: Create a New Output Directory
+Create a directory for this run. All logs and results will go here.
 
-Step 2: Create a New Output Directory
-
-Create a clearly named directory for this specific run. All logs and results will go here.
-
+#+begin_src bash
 mkdir ga_run_pop55_gen1000_rep200
+#+end_src
 
+** Step 3: Submit the Job Array
+Submit the full GA array job via SLURM.  
+The first argument is your output directory, the second is the walltime (safe limit: 10 hours 15 minutes).
 
-Step 3: Submit the Job Array
+#+begin_src bash
+# Usage:
+./submit_ga.sh <output_dir> --time=HH:MM:SS
 
-Use your submit_ga.sh script. The first argument is your new output directory. The second is the SLURM time limit. We need 10 hours 15 minutes to be safe.
-
-# Usage: ./submit_ga.sh <output_dir> --time=HH:MM:SS
+# Example:
 ./submit_ga.sh ga_run_pop55_gen1000_rep200 --time=10:15:00
+#+end_src
 
+** Step 4: Monitor the Job
 
-Step 4: Monitor the Job
-
-The job is now submitted. You can check its progress.
-
-# See all your jobs
+Check job status:
+#+begin_src bash
 squeue -u $(whoami)
+#+end_src
 
+You’ll see ~64 jobs running/configuring (R/CF) and ~936 pending (PD) — this is due to the 64-GPU user limit.  
+Jobs will complete sequentially over ~6.5 days.
 
-You will see ~64 jobs in the R (Running) or CF (Configuring) state and the other ~936 jobs in the PD (Pending) state due to your 64-GPU limit. This is normal. The queue will slowly drain over the next ~6.5 days as jobs complete and new ones start.
-
-You can also look inside your output directory to see the SLURM logs being created:
-
+View SLURM output logs:
+#+begin_src bash
 ls ga_run_pop55_gen1000_rep200/logs/output/
+#+end_src
 
+* How to Analyze Results (After Job Array Completes)
 
-6. How to Analyze Results (After the Job Array Completes)
+Once =squeue -u $(whoami)= shows no jobs left, all 1000 tasks are done.
 
-Once squeue -u $(whoami) shows no more jobs, all 1000 tasks are finished.
+** Step 1: Run the Gather Script
+Run the summarization step on the login node.
 
-Step 1: Run the Gather Script
+#+begin_src bash
+# Usage:
+python3 gather_results.py <output_dir>
 
-Run gather_results.py from your main directory, pointing it to the output directory.
-
-# Usage: python3 gather_results.py <output_dir>
+# Example:
 python3 gather_results.py ga_run_pop55_gen1000_rep200
+#+end_src
 
+** Step 2: Check the Output
+Example output:
 
-Step 2: Check the Output
-
-The script will print the final analysis to your screen, for example:
-
+#+begin_example
 --- Final Permutation Test (Best-of-N Repeats) ---
 Real Data Best-of-N Fitness: 0.030902 (from Task 0)
 Total Permuted Runs Found: 999
@@ -126,9 +131,20 @@ Empirical p-value: (0 + 1) / (999 + 1) = 0.0010
 --- Top Rule Set (from Task 0) ---
   Rule 1: TPPP=0 AND SEC62=0 AND COX6C=0 AND ...
   Rule 2: NLGN4Y=0 AND COL5A1=0 AND FUNDC2=0 AND ...
-  ...
+#+end_example
 
+** Step 3: View the Saved Summary
+A file named =final_summary_best_of_N.txt= will be saved inside your output directory:
 
-Step 3: View the Saved Summary
+#+begin_src bash
+cat ga_run_pop55_gen1000_rep200/final_summary_best_of_N.txt
+#+end_src
 
-A file named final_summary_best_of_N.txt will be saved inside your output directory (`ga_run_pop55_gen10
+---
+
+*Notes:*  
+This Org file can be exported to PDF or HTML with:
+#+begin_src emacs-lisp
+M-x org-export-dispatch
+#+end_src
+Choose `h` for HTML or `p` for PDF (via LaTeX).
