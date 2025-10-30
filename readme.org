@@ -1,0 +1,14 @@
+
+
+* How to run:
+1. ./submit_ga.sh
+
+This calls:
+
+run_ga_array.slurm
+
+This calls simple_ga_array.py
+
+When all the jobs are complete
+
+we can run gather_results.py on login node
