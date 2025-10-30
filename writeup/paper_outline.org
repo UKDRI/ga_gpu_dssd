@@ -1,0 +1,222 @@
+#+title: A Rigorous, Interpretable Genetic Algorithm Framework Reveals Statistically Significant Gene Signatures in Parkinson's Disease Single-Cell Data
+#+author: Sam Neaves
+#+date: <2025-10-30>
+
+* Abstract
+
+- Background:
+  Briefly state the challenge: Parkinson's Disease (PD) is
+  heterogeneous, and single-cell (scRNA-seq) data offers a window into
+  this, but discovering the complex, combinatorial gene patterns that
+  define disease subgroups is difficult. Standard methods (like
+  differential expression) are too simple, while "black-box" AI models
+  (like deep learning) are not interpretable by biologists.
+  
+
+- Methodology:
+  We applied an interpretable subgroup discovery framework using a
+  Genetic Algorithm (GA) to a high-dimensional scRNA-seq dataset of
+  dopaminergic neurons from PD patients and controls. Our method
+  evolves sets of human-readable, IF-THEN logical rules to identify
+  disease-associated subgroups.
+  
+
+- Rigor:
+  To validate our findings and ensure they were not statistical
+  artifacts from searching a high-dimensional space, we performed a
+  massive-scale permutation test (1000 permutations). This involved
+  over 200,000 independent GA runs and consumed ~10,000 GPU-hours on
+  the DAWN supercomputer.
+  
+
+- Results:
+  The GA identified a novel, non-obvious rule set (a combination of
+  gene expression states) that was highly statistically significant
+  (empirical p < 0.001). This rule set achieved a fitness on the real
+  data that was not matched by any of the 999 permuted (randomized)
+  datasets. The resulting rules point to a combinatorial signature
+  involving genes such as [Gene A, Gene B, Gene C...].
+  
+
+- Conclusion:
+  This work provides a statistically-validated, interpretable, and
+  biologically relevant hypothesis for PD pathogenesis. It also
+  demonstrates a powerful, generalizable framework for applying
+  interpretable AI with large-scale HPC to extract robust, testable
+  insights from complex single-cell data.
+
+  
+* Introduction
+
+- The Biological Problem:
+  Start with Parkinson's Disease. It's a complex, devastating
+  neurodegenerative disease. Its progression and presentation are
+  highly heterogeneous, suggesting multiple underlying mechanisms or
+  patient subgroups.
+  
+
+- The Data Opportunity:
+  The emergence of single-cell RNA sequencing (scRNA-seq) allows us,
+  for the first time, to probe this heterogeneity at the resolution of
+  individual cells, like the vulnerable dopaminergic neurons.
+  
+
+- The "Interpretability Gap" (Your Justification):
+  This is your key argument.
+
+  State that simple statistical methods (like differential gene
+  expression) are useful but limited, as they only find individual
+  gene changes and miss the combinatorial logic of biological
+  pathways.
+  
+
+  State that "black-box" machine learning (e.g., Deep Learning, SVMs)
+  can be highly predictive but fail to provide interpretable
+  insights. A 95% accurate model is useless to a biologist if it
+  cannot explain why it made its decision.
+  
+
+  This creates a need for methods that are both powerful (can search
+  high-dimensional, combinatorial spaces) and interpretable (produce
+  human-readable, testable hypotheses).
+  
+
+- Our Framework (GA + Rigor):
+  Introduce your solution.
+
+  Propose the use of a rule-based Genetic Algorithm, a class of
+  evolutionary algorithm well-suited for complex combinatorial
+  optimization.
+  
+
+- Justify the GA:
+  Explicitly state it was chosen because it produces interpretable IF-THEN rules that represent gene combinations.
+
+- Justify the Rigor:
+  State that to overcome the risk of "p-hacking" or finding spurious
+  correlations in the high-dimensional data, you paired the GA with a
+  massive-scale permutation test.
+  
+
+- Punchline:
+  In this paper, we apply this rigorous, interpretable framework to a
+  [Your Data] scRNA-seq dataset. We leverage the DAWN HPC system to
+  perform ~10,000 GPU-hours of computation, resulting in the discovery
+  of a statistically significant (p < 0.001) and interpretable gene
+  signature for a PD subgroup.
+
+* Methods
+
+This section must be crystal clear and reproducible.
+
+** Single-Cell Data Preprocessing:
+
+- Source: Describe the SNatlas_DaNs_seurat.RData object.
+
+- Filtering: Detail the cell filtering (e.g., keeping only CTR and PD labels PD_B5-6, PD_B3-4, resulting in 6,385 cells).
+
+- Confounder Correction: State that you used SCTransform to normalize data and simultaneously regress out the donor batch effect (the Sample_v2 variable). This is crucial for rigor.
+
+- Feature Selection: Explain that you performed a DE test on the corrected data and selected the top 1000 most variant genes for the GA, balancing computational feasibility with discovery.
+
+- Binarization: Describe the z-scoring method ((expression - mean) / std_dev) and binarization (> 0 -> 1, <= 0 -> 0) to create the final 6385 x 1000 input matrix.
+
+** The Genetic Algorithm Framework:
+
+- Chromosome Representation: Explain that each "individual" is a chromosome representing a set of k rules (where k was 3-6). Explain the "mask + value" structure for each rule (e.g., 2 * 1000 = 2000 bits per rule).
+
+- Fitness Function: This is critical. Define Fitness = Quality / Overlap.
+
+- Explain Quality = WRAcc(Union(Rules)). Justify WRAcc as a metric that balances subgroup size (support) and accuracy (lift).
+
+- Explain Overlap = TotalMatches / UniqueMatches as a penalty to encourage diverse, non-redundant rule sets.
+
+- GA Parameters: State them clearly: population_size=55, num_generations=1000, tournament selection (size=5), single-point crossover, bit-flip mutation (rate=0.0001), elitism (count=2).
+
+** Statistical Validation: The "Best-of-N-Repeats" Permutation Test:
+
+This is your most impressive method. Explain it in detail.
+
+- Null Hypothesis: That the observed gene expression patterns are not associated with the PD/CTR labels.
+
+- Procedure: To test this, you created 1000 datasets (1 real + 999 permuted by shuffling labels).
+
+- Rigor Justification: To ensure a fair comparison, the exact same computational effort was applied to every single dataset.
+
+- Effort per Dataset: Define the effort: "Each of the 1000 datasets was searched by N=200 independent GA runs, each starting from a different random population. The single highest-fitness chromosome found across all 200 repeats was recorded as the 'best' result for that dataset."
+
+- P-Value Calculation: The empirical p-value is (count(F_perm_i >= F_real) + 1) / (999 + 1).
+
+* HPC Implementation:
+
+- Briefly state the GA was implemented in Python using PyTorch/IPEX for GPU acceleration.
+
+- Explain the experiment was executed as a 1000-task SLURM job array (--array=0-999) on the DAWN supercomputer.
+
+- State the resource request (--time=10:00:00, --gres=gpu:1) and the
+  total cost: "This comprehensive, statistically rigorous search
+  consumed approximately 10,000 GPU-hours."
+  
+
+
+* Results
+1. A Statistically Significant Signature is Discovered:
+
+- State the main finding: "The 'best-of-200' search on the real data (Task 0) yielded a rule set with a fitness of [F_real]."
+
+- "The distribution of 'best-of-200' fitness scores from the 999 permuted datasets had a mean of [Avg_F_perm] and a maximum of [Max_F_perm]."
+
+- "No permuted dataset achieved a fitness as high as the real data. This yields an empirical p-value of p < 0.001 (0 observed / 999 permutations, +1/+1).
+
+- THE FIGURE: You must include a histogram here. It will show the beautiful bell curve of the 999 permuted fitness scores, with a single red line for your F_real score sitting far to the right, all alone. This figure is the central proof of your paper.
+
+2. The Interpretable PD Signature:
+
+- Present the winning rule set (the Rank 1 rules from the ga_results_0.txt file).
+
+- List the rules clearly:
+
+- Rule 1: TPPP=0 AND SEC62=0 AND COX6C=0 ...
+
+- Rule 2: NLGN4Y=0 AND COL5A1=0 ...
+
+  ...
+
+3. Subgroup Characterization (The so what):
+
+Report the support (e.g., "This rule set identifies a subgroup of [X] cells...") and precision (e.g., "...of which [Y]% are PD cells, representing a [Z]-fold enrichment over baseline.")
+
+(Optional, but powerful) Show a UMAP plot of all 6,385 cells, with the
+cells identified by your rule set colored differently. Do they
+cluster?
+
+* Discussion
+
+1. Summary of Findings: Re-state the main finding (a p < 0.001 interpretable signature was found) and emphasize that its strength comes from the combination of genes, not any single gene.
+
+2. Biological Interpretation (Your collaboration): This is where you discuss the meaning of the genes in the rules. "The appearance of TPPP, COX6C, and [Gene X] in the top rules is highly suggestive... TPPP is involved in... COX6C is a component of... The fact that our model found a rule combining TPPP=0 (low) and COX6C=0 (low) suggests a combinatorial failure in [X pathway]... This is a novel, testable hypothesis for a specific PD subgroup."
+
+3. Methodological Reflections (Your "Experience"):
+
+- On Interpretability: Reiterate that this result is immediately useful to biologists, unlike a black-box model.
+
+- On Rigor: Discuss the necessity of the 10,000-hour permutation test. Show the Avg_F_perm was non-zero, proving that even random data can produce seemingly good rules. This justifies the need for the massive computation to prove your real result was not random.
+
+- On HPC: State that this level of statistical rigor, while computationally expensive, is now feasible on modern HPC platforms like DAWN and should be considered a new standard for AI-driven discovery in biomedicine.
+
+4. Limitations: Be upfront.
+
+- The search was limited to 1000 pre-selected genes.
+
+- The binarization of data is a simplification.
+
+- The results are a computational hypothesis, not a wet-lab-validated fact (this is the next paper).
+
+* Conclusion:
+  "We have successfully applied an interpretable, scalable, and
+  statistically rigorous GA framework to discover a novel gene
+  signature in PD. This work provides a concrete, data-driven
+  hypothesis for PD researchers and serves as a powerful case study
+  for the use of interpretable AI in complex biomedical discovery."
+  
+
