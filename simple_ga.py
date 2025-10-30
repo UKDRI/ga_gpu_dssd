@@ -340,9 +340,12 @@ def run_ga(data_batch_gpu, num_gens, pop_size):
         gc.collect()
 
 
-# =================== MAIN EXECUTION LOOP (REPEATS) =====================
+# ================== MAIN EXECUTION LOOP (REPEATS) =====================
 task_overall_best_fitness = -1.0
 task_overall_best_chromosome = None
+# --- MODIFIED: Define output_filename at the start ---
+output_filename = os.path.join(output_dir, f"ga_results_{task_id}.txt")
+# --- (Resume logic could be added here by reading the file if it exists) ---
 
 start_time_total = time.time()
 print(f"\n--- Task {task_id}: Starting {num_repeats} GA repeats ({num_generations} gens, {population_size} pop) ---")
@@ -362,6 +365,44 @@ for run_num in range(num_repeats):
         task_overall_best_fitness = fitness_this_repeat
         task_overall_best_chromosome = chromosome_this_repeat # Already on CPU
         
+        # --- NEW: Save this new best result (checkpoint) immediately ---
+        print(f"  >>> Saving new best result to {output_filename}...")
+        try:
+            # Write atomically to avoid corrupted files
+            temp_output_filename = f"{output_filename}.tmp"
+            with open(temp_output_filename, "w") as f:
+                f.write("--- Best Fitness (Best-of-N-Repeats) ---\n")
+                f.write(f"{task_overall_best_fitness:.6f}\n")
+                f.write("\n--- Is Real Data Run ---\n")
+                f.write(f"{IS_REAL_DATA_RUN}\n")
+                if IS_REAL_DATA_RUN and task_overall_best_chromosome is not None:
+                    f.write("\n--- Best Real Chromosome (Binary) ---\n")
+                    binary_string = "".join(map(str, task_overall_best_chromosome.tolist()))
+                    f.write(binary_string + "\n")
+                    f.write("\n--- Decoded Top Rules from Best Real Chromosome ---\n")
+                    decoded_rules = decode_chromosome(task_overall_best_chromosome)
+                    if not decoded_rules:
+                        f.write("  (No active rules found)\n")
+                    else:
+                        active_rules_count = 0
+                        for j, rule in enumerate(decoded_rules[:max_rules_per_chrom]):
+                            if rule != "Always true":
+                                rule_str = f"  Rule {j+1}: {rule}"
+                                f.write(rule_str + "\n")
+                                active_rules_count += 1
+                        if active_rules_count == 0:
+                            f.write("  (All rules evaluated to 'Always true')\n")
+                elif IS_REAL_DATA_RUN:
+                    f.write("\n--- No valid real chromosome found by Task 0 ---\n")
+            
+            # Atomic rename (move)
+            os.replace(temp_output_filename, output_filename)
+            print(f"  >>> Successfully saved checkpoint.")
+            
+        except Exception as e:
+            print(f"  >>> WARNING: Failed to save checkpoint file: {e}")
+        # --- END NEW SAVE BLOCK ---
+        
     repeat_end_time = time.time()
     print(f"Repeat {run_num+1} complete. Time: {repeat_end_time - repeat_start_time:.2f} seconds.")
     
@@ -376,56 +417,39 @@ print(f"Best fitness found for this permutation (Task {task_id}): {task_overall_
 
 
 # =================== FINAL RESULTS =====================
-output_filename = os.path.join(output_dir, f"ga_results_{task_id}.txt")
-print(f"Writing final results to '{output_filename}'...")
+# This section is now just a final confirmation print
+# The actual file has been written/updated throughout the loop
+print(f"Final write check for '{output_filename}'...")
 
-try:
-    with open(output_filename, "w") as f:
-        # --- Write the SINGLE best fitness from all repeats ---
-        f.write("--- Best Fitness (Best-of-N-Repeats) ---\n")
-        f.write(f"{task_overall_best_fitness:.6f}\n")
-        
-        # --- Write if this was the real data run ---
-        f.write("\n--- Is Real Data Run ---\n")
-        f.write(f"{IS_REAL_DATA_RUN}\n")
-
-        # --- If this is Task 0, save the best chromosome and rules ---
-        if IS_REAL_DATA_RUN and task_overall_best_chromosome is not None:
-            f.write("\n--- Best Real Chromosome (Binary) ---\n")
-            binary_string = "".join(map(str, task_overall_best_chromosome.tolist()))
-            f.write(binary_string + "\n")
-
-            f.write("\n--- Decoded Top Rules from Best Real Chromosome ---\n")
-            try:
-                decoded_rules = decode_chromosome(task_overall_best_chromosome)
-                if not decoded_rules:
-                    f.write("  (No active rules found)\n")
-                else:
-                    active_rules_count = 0
-                    for j, rule in enumerate(decoded_rules[:max_rules_per_chrom]):
-                        if rule != "Always true":
-                            rule_str = f"  Rule {j+1}: {rule}"
-                            f.write(rule_str + "\n")
-                            active_rules_count += 1
-                    if active_rules_count == 0:
-                        f.write("  (All rules evaluated to 'Always true')\n")
-            except Exception as e:
-                f.write(f"  Error decoding chromosome: {e}\n")
-                print(f"Error decoding best chromosome for saving: {e}")
-        elif IS_REAL_DATA_RUN:
-            f.write("\n--- No valid real chromosome found by Task 0 ---\n")
-
-except Exception as e:
-    print(f"!!! CRITICAL ERROR: Failed to write results file: {e}")
-    # Try to write a minimal error file
+# --- MODIFIED: Check if file exists, if not, write it ---
+# This handles the case where num_repeats = 0 or no new best was ever found
+if not os.path.exists(output_filename):
+    print("No checkpoints were saved (or num_repeats=0). Writing final file now.")
     try:
-        error_filename = os.path.join(output_dir, f"ga_ERROR_task_{task_id}.txt")
-        with open(error_filename, "w") as f_err:
-            f_err.write(f"Task {task_id} failed to write final results.\n")
-            f_err.write(f"Error: {e}\n")
-            f_err.write(f"Best fitness found before crash: {task_overall_best_fitness}\n")
-    except:
-        pass # Final attempt failed
+        with open(output_filename, "w") as f:
+            f.write("--- Best Fitness (Best-of-N-Repeats) ---\n")
+            f.write(f"{task_overall_best_fitness:.6f}\n") # Will be -1.0 if no runs completed
+            f.write("\n--- Is Real Data Run ---\n")
+            f.write(f"{IS_REAL_DATA_RUN}\n")
+            if IS_REAL_DATA_RUN:
+                 f.write("\n--- No valid real chromosome found (or no runs completed) ---\n")
+    except Exception as e:
+        print(f"!!! CRITICAL ERROR: Failed to write final results file: {e}")
+else:
+    print("Final checkpoint file already exists.")
 
-print(f"\nDone. Results saved to '{output_filename}'.")
+# Error file logic (in case of crash during final write check)
+try:
+    if task_overall_best_fitness == -1.0: # Check if any run actually completed
+         # Check if an error file already exists, if not, write one
+        error_filename = os.path.join(output_dir, f"ga_ERROR_task_{task_id}.txt")
+        if not os.path.exists(error_filename) and not os.path.exists(output_filename):
+            with open(error_filename, "w") as f_err:
+                f_err.write(f"Task {task_id} failed: No successful GA repeats completed.\n")
+                f_err.write(f"Best fitness found: {task_overall_best_fitness}\n")
+except Exception as e:
+    print(f"Error writing error file: {e}")
+
+
+print(f"\nDone. Final results for Task {task_id} are in '{output_filename}'.")
 
