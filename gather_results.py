@@ -42,8 +42,14 @@ def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
     Generates a back-to-back horizontal bar chart for the Rank 1 rules,
     plus the global distribution.
     """
-    if not task_0_rules or not task_0_params:
-        print("Cannot generate subgroup plot: missing Task 0 rule data or params.")
+    if not task_0_rules or 'num_positives' not in task_0_params or 'num_negatives' not in task_0_params:
+        print("Cannot generate subgroup plot: missing Task 0 rule data or global positive/negative counts.")
+        if not task_0_rules:
+            print("  Reason: task_0_rules list is empty.")
+        if 'num_positives' not in task_0_params:
+            print("  Reason: 'num_positives' not found in task_0_params.")
+        if 'num_negatives' not in task_0_params:
+             print("  Reason: 'num_negatives' not found in task_0_params.")
         return
 
     labels = []
@@ -209,6 +215,17 @@ def gather_and_analyze(results_directory):
                     elif in_rules_section and is_task0_file:
                         # Add raw line to summary text
                         current_rules_text.append(line) 
+
+                        # --- Grab Global Stats if we don't have them ---
+                        if 'num_positives' not in task_0_params:
+                            pos_match = re.search(r"- Positives: \d+ / (\d+) total positives", line)
+                            if pos_match:
+                                task_0_params['num_positives'] = int(pos_match.group(1))
+                        
+                        if 'num_negatives' not in task_0_params:
+                            neg_match = re.search(r"- Negatives: \d+ / (\d+) total negatives", line)
+                            if neg_match:
+                                task_0_params['num_negatives'] = int(neg_match.group(1))
                         
                         # --- Parse for Plot 2 ---
                         rank_match = re.search(r"--- Rank (\d+) \(Fitness: .*\) ---", line)
@@ -217,7 +234,8 @@ def gather_and_analyze(results_directory):
                         
                         # Only parse rules for Rank 1
                         if current_rank == 1:
-                            rule_match = re.search(r"- Rule (\d+): (.*)", line)
+                            # FIX: Added '^\s*' to handle leading whitespace
+                            rule_match = re.search(r"^\s*- Rule (\d+): (.*)", line)
                             if rule_match:
                                 rule_num = int(rule_match.group(1))
                                 rule_str = rule_match.group(2)
@@ -230,7 +248,8 @@ def gather_and_analyze(results_directory):
                                     "n_neg": 0  # Will be filled by next line
                                 })
                             
-                            stat_match = re.search(r"\(Covers: \d+ total \| (\d+) Pos \| (\d+) Neg\)", line)
+                            # FIX: Added '^\s*' to handle leading whitespace
+                            stat_match = re.search(r"^\s*\(Covers: \d+ total \| (\d+) Pos \| (\d+) Neg\)", line)
                             if stat_match and task_0_rules:
                                 # This stat line belongs to the *last* rule added
                                 n_pos = int(stat_match.group(1))
@@ -347,17 +366,4 @@ if __name__ == "__main__":
 
     print(f"--- Running Analysis on Directory: {os.path.abspath(target_dir)} ---")
     gather_and_analyze(target_dir)
-```
 
-### How to Run:
-
-1.  Save the code above as `gather_results.py` in your main `gpu_ga` directory.
-2.  Run it from your `gpu_ga` directory, passing the **results directory** as an argument:
-
-    ```bash
-    # Example for your 10-minute test run:
-    python3 gather_results.py /scratch/dn-neav1/ga_test_10min
-    
-    # Example for your production run:
-    python3 gather_results.py /scratch/dn-neav1/ga_prod_10hr
-    
