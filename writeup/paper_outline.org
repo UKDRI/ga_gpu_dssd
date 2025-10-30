@@ -83,11 +83,20 @@
 
 - Our Framework (GA + Rigor):
   Introduce your solution.
-
   Propose the use of a rule-based Genetic Algorithm, a class of
   evolutionary algorithm well-suited for complex combinatorial
-  optimization.
-  
+  optimization. Our framework is specifically designed for Diverse
+  Subgroup Set Discovery (DSSD). We hypothesize that Parkinson's is
+  not a monolithic disease but a heterogeneous condition with
+  multiple, distinct dysfunctional cell states. Therefore, unlike
+  standard methods that find a single 'best' rule, our GA evolves a
+  set of rules, where the entire set is evaluated for quality and
+  diversity. Each chromosome in our GA represents a model of this
+  heterogeneity, with each rule potentially identifying a distinct
+  biological subgroup. To validate these models, we paired the GA with a massive-scale permutation
+test..."
+
+  "Critically, we implemented this GA in PyTorch to leverage GPU parallelization, transforming the computationally infeasible task of a 1000-permutation test into a tractable one."
 
 - Justify the GA:
   Explicitly state it was chosen because it produces interpretable IF-THEN rules that represent gene combinations.
@@ -123,6 +132,8 @@ This section must be crystal clear and reproducible.
 
 ** The Genetic Algorithm Framework:
 
+*** 
+
 - Chromosome Representation: Explain that each "individual" is a chromosome representing a set of k rules (where k was 3-6). Explain the "mask + value" structure for each rule (e.g., 2 * 1000 = 2000 bits per rule).
 
 - Fitness Function: This is critical. Define Fitness = Quality / Overlap.
@@ -131,7 +142,91 @@ This section must be crystal clear and reproducible.
 
 - Explain Overlap = TotalMatches / UniqueMatches as a penalty to encourage diverse, non-redundant rule sets.
 
-- GA Parameters: State them clearly: population_size=55, num_generations=1000, tournament selection (size=5), single-point crossover, bit-flip mutation (rate=0.0001), elitism (count=2).
+- GA Parameters: State them clearly: population_size=55,
+  num_generations=1000, tournament selection (size=5), single-point
+  crossover, bit-flip mutation (rate=0.0001), elitism (count=2).
+
+*** A Diverse Subgroup Set Discovery (DSSD) Fitness Function
+
+Our primary goal was not to find the single *best* rule describing PD,
+as this would ignore the known heterogeneity of the disease. Standard
+subgroup discovery algorithms often suffer from redundancy, where the
+top 10 "best" rules are trivial variations of each other, all
+describing the same, largest subgroup.
+
+To overcome this, we designed our framework for *Diverse Subgroup Set
+Discovery (DSSD)*. The central hypothesis is that our GA chromosome,
+as a set of rules:
+
+\[
+\{ \text{Rule}_1, \text{Rule}_2, \ldots, \text{Rule}_k \}
+\]
+
+can serve as an interpretable model of distinct cell states.
+
+To force the GA to find such a set, we designed a custom,
+set-based fitness function that simultaneously rewards both quality
+(exploitation) and diversity (exploration):
+
+\[
+\text{Fitness} =
+\frac{\text{Quality}\big(\text{Union}(\text{Rules})\big)}
+     {\text{Overlap}(\text{Rules})}
+\]
+
+1. *Quality (WRAcc of the Union)*  
+   The quality of a chromosome is measured by the Weighted Relative Accuracy (WRAcc)
+   of the union of all cells covered by its rules.
+
+   \[
+   \text{WRAcc} = P(G) \times \big(P(\text{Class} \mid G) - P(\text{Class})\big)
+   \]
+
+   where \( G \) is the subgroup.  
+   This metric balances *support* (the size of the total subgroup found, \( P(G) \))
+   with *lift* (the enrichment of PD cells in that subgroup,
+   \( P(\text{Class} \mid G) - P(\text{Class}) \)).
+   It rewards chromosomes that identify a large and highly enriched population of PD cells.
+
+2. *Diversity (Overlap Penalty)*  
+   The denominator, *Overlap*, is a penalty for redundancy. It is defined as:
+
+   \[
+   \text{Overlap} = \frac{\text{TotalMatches}}{\text{UniqueMatches}}
+   \]
+
+   where *UniqueMatches* is the number of cells covered by the union (as in the quality metric),
+   and *TotalMatches* is the sum of cells covered by each rule individually.
+   If all rules in a set cover the exact same cells, the Overlap score will be high (equal to \( k \)),
+   heavily penalizing the chromosome’s fitness.
+
+*Interpretation:*  
+This fitness function creates an evolutionary pressure that punishes redundant rule sets
+and rewards sets where each rule identifies a different population of cells,
+all while maintaining high overall enrichment for the PD phenotype.
+A high-fitness chromosome is therefore interpreted as a model of distinct,
+disease-associated cell states.
+
+***
+
+2.c. Scalable Implementation: A GPU-Accelerated Genetic Algorithm
+While the DSSD fitness function defines what to find, a computationally efficient search algorithm is required to find it. Standard subgroup discovery implementations (e.g., in R or sequential Python) are often iterative, CPU-bound, and computationally slow. A single run on a dataset of this scale can take many minutes to hours.
+
+This slowness makes a rigorous permutation test—which requires running the entire discovery process 1,000+ times—computationally infeasible.
+
+To solve this, we adapted the DSSD framework to a Genetic Algorithm (GA), as the population-based nature of GAs is "embarrassingly parallel." We specifically designed our GA implementation to leverage massive GPU parallelization using PyTorch and the Intel Extension for PyTorch (IPEX).
+
+The key adaptation was vectorizing the entire fitness calculation. Instead of iterating through each chromosome one by one, we:
+
+Represented the entire population for a batch of permutations as a single large tensor [N, P, C], where N is the number of permutations (e.g., 16), P is the population size (e.g., 55), and C is the chromosome length.
+
+Implemented the get_rule_matches function as a series of large-scale tensor broadcast operations. This creates a massive intermediate tensor ([N, P, R, S, F]) that allows the GPU to check every rule, for every chromosome, for every permutation, against every sample, for every feature simultaneously.
+
+All subsequent calculations (WRAcc, overlap) were also performed as parallel tensor operations, resulting in a fitness score for every chromosome in the batch.
+
+This GPU-accelerated design is the critical enabler of our study. It collapses the runtime for a single, complex DSSD run (e.g., 1000 generations, pop=55) from hours on a CPU to approximately 2-3 minutes on a single Intel Max 1550 GPU.
+
+This massive speedup is what made our "best-of-N-repeats" permutation test, which consumed ~10,000 GPU-hours in total, computationally feasible. It allowed us to apply the same intense search effort (200 repeats * 1000 generations) to both the real data and all 999 permuted datasets, ensuring statistical rigor.
 
 ** Statistical Validation: The "Best-of-N-Repeats" Permutation Test:
 
@@ -194,9 +289,44 @@ cluster?
 
 1. Summary of Findings: Re-state the main finding (a p < 0.001 interpretable signature was found) and emphasize that its strength comes from the combination of genes, not any single gene.
 
-2. Biological Interpretation (Your collaboration): This is where you discuss the meaning of the genes in the rules. "The appearance of TPPP, COX6C, and [Gene X] in the top rules is highly suggestive... TPPP is involved in... COX6C is a component of... The fact that our model found a rule combining TPPP=0 (low) and COX6C=0 (low) suggests a combinatorial failure in [X pathway]... This is a novel, testable hypothesis for a specific PD subgroup."
+2. Biological Interpretation (Your collaboration): This is where you
+   discuss the meaning of the genes in the rules. "The appearance of
+   TPPP, COX6C, and [Gene X] in the top rules is highly
+   suggestive... TPPP is involved in... COX6C is a component of... The
+   fact that our model found a rule combining TPPP=0 (low) and COX6C=0
+   (low) suggests a combinatorial failure in [X pathway]... This is a
+   novel, testable hypothesis for a specific PD subgroup."
 
-3. Methodological Reflections (Your "Experience"):
+3. The DSSD Framework Successfully Modeled Heterogeneity:
+   Our goal was not just to find a single signature, but to model PD's
+   heterogeneity. The DSSD framework proved highly effective. The
+   top-ranking chromosome (p < 0.001) consisted of 6 distinct rules
+   (see Results, Table X). An analysis of these rules shows they are
+   not redundant; they identify different, though potentially
+   overlapping, subsets of the cell population.
+
+   For example, Rule 1 (TPPP=0 AND COX6C=0 ...) points to a subgroup
+   defined by [X genes, e.g., mitochondrial function], while Rule 3
+   (COL16A1=0 AND SDC3=0 ...) identifies a different subgroup defined
+   by [Y genes, e.g., extracellular matrix]. This provides a
+   data-driven model of multiple potential dysfunctional states
+   co-existing within the PD patient population. These distinct
+   rule-defined subgroups can now be analyzed independently (e.g., via
+   pathway analysis or visualization on the UMAP) to explore these
+   different facets of the disease. This demonstrates the power of
+   DSSD over simpler methods that would have missed this richness.
+
+   A key contribution of this work is a scalable framework for
+   rigorous DSSD. By adapting the DSSD concept to a fully vectorized,
+   GPU-accelerated Genetic Algorithm, we demonstrated that large-scale
+   permutation testing (consuming 10,000+ GPU-hours) is not only
+   possible but necessary for validating findings in high-dimensional
+   data. This HPC-centric approach provides a blueprint for future
+   studies aiming to bridge the gap between interpretable AI and
+   statistical robust ai.
+   
+
+4. Methodological Reflections (Your "Experience"):
 
 - On Interpretability: Reiterate that this result is immediately useful to biologists, unlike a black-box model.
 
@@ -204,7 +334,7 @@ cluster?
 
 - On HPC: State that this level of statistical rigor, while computationally expensive, is now feasible on modern HPC platforms like DAWN and should be considered a new standard for AI-driven discovery in biomedicine.
 
-4. Limitations: Be upfront.
+5. Limitations: Be upfront.
 
 - The search was limited to 1000 pre-selected genes.
 
