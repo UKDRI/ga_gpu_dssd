@@ -4,6 +4,17 @@ import sys
 import re
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+
+# --- NEW: Import shared utils ---
+# Assumes ga_utils.py is in the same directory
+from ga_utils import (
+    parse_rules_from_text, 
+    re_encode_rule_from_string, 
+    get_rule_matches_cpu
+)
+
 
 def plot_fitness_histogram(real_fitness, all_perm_fitnesses, output_path):
     """
@@ -108,6 +119,62 @@ def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
         print(f"Error saving subgroup plot: {e}")
     plt.close()
 
+# --- NEW: Cover Redundancy Calculation ---
+def calculate_cover_redundancy(top_k_rules_text, X_data_cpu, gene_names_list, num_features):
+    """
+    Calculates the Cover Redundancy (CR) metric from the paper.
+    CR = (1 / |S|) * sum(|c(t) - c_hat|)
+    """
+    print("\nCalculating Cover Redundancy for Top-K set...")
+    
+    # 1. Parse rule strings from the text block
+    rule_strings = parse_rules_from_text(top_k_rules_text)
+    if not rule_strings:
+        print("Could not parse any rules for CR calculation.")
+        return None
+        
+    print(f"  Found {len(rule_strings)} rules in the top-k set.")
+    
+    # 2. Re-create the cover for each rule
+    all_covers = []
+    for rule_str in rule_strings:
+        if rule_str == "Always true":
+            continue
+        
+        # Re-encode string "GENE=1" to a (mask, values) tensor
+        mask, values = re_encode_rule_from_string(rule_str, gene_names_list, num_features)
+        
+        # We only need the rule tensor part (mask + values)
+        rule_tensor_cpu = torch.cat([mask, values])
+        
+        # Get the boolean vector [n_samples] for this rule
+        matches_mask = get_rule_matches_cpu(rule_tensor_cpu, X_data_cpu, num_features)
+        all_covers.append(matches_mask.int()) # Store as 0s and 1s
+
+    if not all_covers:
+        print("No valid rule covers generated.")
+        return None
+
+    # 3. Calculate CR
+    # Stack all cover vectors [k, n_samples]
+    cover_matrix = torch.stack(all_covers)
+    
+    # c(t): cover count for each tuple (sample) [n_samples]
+    c_t = torch.sum(cover_matrix, dim=0).float()
+    
+    # c_hat: expected (average) cover count
+    c_hat = torch.mean(c_t)
+    
+    # |S|: total number of samples
+    S_size = float(X_data_cpu.shape[0])
+    
+    # CR = (1 / |S|) * sum(|c(t) - c_hat|)
+    cr_metric = torch.sum(torch.abs(c_t - c_hat)) / S_size
+    
+    cr_val = cr_metric.item()
+    print(f"  Cover Redundancy (CR) = {cr_val:.6f}")
+    return cr_val
+
 
 def gather_and_analyze(results_directory):
     """
@@ -120,6 +187,7 @@ def gather_and_analyze(results_directory):
     task_0_rules = [] # For Rank 1 rules
     
     top_rules_text = "" # To store the raw text for the summary file
+    top_k_rules_text_for_cr = [] # Just the rule lines for CR
     
     task0_file_found = False
 
@@ -168,6 +236,7 @@ def gather_and_analyze(results_directory):
                         in_rules_section = True
                         if is_task0_file:
                             current_rules_text.append("\n" + line)
+                            top_k_rules_text_for_cr.append(line) # Add header
                         continue
                     elif "--- Permuted Run Task ---" in line:
                         # This footer ends all sections
@@ -215,6 +284,7 @@ def gather_and_analyze(results_directory):
                     elif in_rules_section and is_task0_file:
                         # Add raw line to summary text
                         current_rules_text.append(line) 
+                        top_k_rules_text_for_cr.append(line) # Add all rule/stat lines
 
                         # --- Grab Global Stats if we don't have them ---
                         if 'num_positives' not in task_0_params:
@@ -265,6 +335,42 @@ def gather_and_analyze(results_directory):
             print(f"Error reading file {f_name}: {e}")
             continue
 
+    # --- NEW: Load data for Cover Redundancy ---
+    X_data_cpu = None
+    gene_names_list = []
+    
+    # Need base_dir. Assume we are in 'gpu_ga' and results are in 'results_dir'
+    # This finds the 'gpu_ga' directory, assuming script is run from there.
+    base_dir = "." 
+    data_dir_relative = "sc_data"
+    x_file = os.path.join(base_dir, data_dir_relative, "X_binary.csv")
+    
+    if 'num_features' not in task_0_params:
+        print("Warning: 'num_features' not in params. CR calc may fail.")
+        
+    try:
+        X_df = pd.read_csv(x_file)
+        gene_names_list = X_df.columns.tolist()
+        X_data_cpu = torch.tensor(X_df.values, dtype=torch.int32)
+        print(f"\nLoaded {x_file} for Cover Redundancy calculation.")
+        
+        # --- Calculate Cover Redundancy ---
+        cr_value = calculate_cover_redundancy(
+            top_k_rules_text_for_cr, # Use the full text block
+            X_data_cpu,
+            gene_names_list,
+            task_0_params.get('num_features', 1000) # Default to 1000 if not found
+        )
+        if cr_value is not None:
+            summary_lines.append(f"\nCover Redundancy (CR) of Top-K Set: {cr_value:.6f}")
+            
+    except FileNotFoundError:
+        print(f"\nWarning: Could not find data file at {x_file}.")
+        print("  Skipping Cover Redundancy calculation.")
+    except Exception as e:
+        print(f"\nError during Cover Redundancy calculation: {e}")
+
+
     # --- Analysis ---
     print("\n--- Final Permutation Test ---")
 
@@ -279,11 +385,9 @@ def gather_and_analyze(results_directory):
     print(f"Real Data Fitness: {real_fitness:.8f}")
     print(f"Total Permuted Runs Found: {len(all_perm_fitnesses)}")
 
-    summary_lines = [
-        "--- Final Permutation Test ---",
-        f"Real Data Fitness: {real_fitness:.8f}",
-        f"Total Permuted Runs Found: {len(all_perm_fitnesses)}"
-    ]
+    summary_lines.insert(0, f"--- PARAMETERS (from Task 0) ---")
+    param_lines = [f"{key}: {val}" for key, val in task_0_params.items()]
+    summary_lines[1:1] = param_lines # Insert params after header
 
     if len(all_perm_fitnesses) > 0:
         perm_array = np.array(all_perm_fitnesses)
@@ -295,9 +399,6 @@ def gather_and_analyze(results_directory):
         count_better_or_equal = np.sum(perm_array >= real_fitness)
         
         # Empirical p-value: (count_better + 1) / (total_runs + 1)
-        # We assume the 'real' run is one of the runs, but we're comparing
-        # it to a separate set of permuted runs.
-        # Let's stick to the (B+1)/(N+1) formula.
         p_value_B = count_better_or_equal
         p_value_N = len(all_perm_fitnesses)
         p_value = (p_value_B + 1) / (p_value_N + 1)
