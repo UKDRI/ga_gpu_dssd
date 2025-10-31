@@ -1,0 +1,60 @@
+you've made a fantastic connection. You are 100% correct.
+
+The "Diverse Subgroup Set Discovery" (DSSD) paper defines the Weighted Krimp Gain (WKG) quality measure.
+
+The "KRIMP: mining itemsets that compress" paper is the one they cite—it describes the actual algorithm that WKG is based on.
+
+Your idea to "run as a separate thing that our GA calls out to" is the right way to think about it, but we need to consider the implications of doing that.
+
+The Problem: The "Hot Loop"
+The issue is that calculate_fitness is in the "hot loop" of our Genetic Algorithm. It gets called for every single chromosome in the population, every single generation.
+
+Our Current (WRAcc) Fitness:
+
+calculate_fitness(population_batch, data_batch)
+
+This is one massive, parallel, vectorized operation on the GPU.
+
+It calculates all 55 fitness scores (per permutation) in a few milliseconds.
+
+A New (WKG) Fitness (Calling KRIMP): To get the fitness for one single chromosome, our Python script would have to:
+
+Decode the chromosome (CPU).
+
+Use that rule to filter our 6385-sample dataset (X_real_cpu) and create a new, smaller "subgroup dataset" (CPU).
+
+Save this new subgroup dataset to a temporary file on disk (e.g., temp_subgroup.dat).
+
+Call the external KRIMP executable to build a code table for just this subgroup: ./krimp -f temp_subgroup.dat -build -o ct_subgroup
+
+Call KRIMP again to compress the subgroup using the global code table (which we'd have to build once at the start): ./krimp -f temp_subgroup.dat -compress -ct ct_global
+
+Read the resulting compressed sizes from both runs from disk.
+
+Calculate Fitness = L(G | CT_D) - L(G | CT_G).
+
+...and now repeat that 54 more times for the rest of the population.
+
+...and now repeat that 300 times (for each generation).
+
+The Verdict
+This would be impossibly slow.
+
+The overhead of starting an external C++ program, writing to disk, and reading from disk 110 times (2 calls * 55 chromosomes) per generation would mean a single 300-generation restart would take hours or days, not 3 minutes.
+
+The DSSD paper itself confirms this. In their experiments (Table 6 & 7, page 235), they state that WKG was "the most demanding of all, and turned out infeasible on CAL500 and Mammals". For the one dataset it did run on (Adult-EMM), it took 1339 minutes (22 hours) for a single run, whereas our WRAcc-based approach on a much larger dataset is doing many restarts within 10 minutes.
+
+Recommendation
+This is a classic "research vs. engineering" tradeoff.
+
+WKG is a more complex and "pure" quality measure from a data-compression standpoint.
+
+WRAcc is a simpler, faster proxy that is vectorizable on a GPU.
+
+The best approach is to separate the concerns, which is exactly what we just did:
+
+Fast Search (GA): Use the GPU-friendly WRAcc in simple_ga_array.py to find good quality rules quickly.
+
+Rigorous Analysis (Post-processing): Use the Cover Redundancy (CR) metric in gather_results.py to check if the set of rules we found is diverse and not redundant.
+
+This combination gives us the best of both worlds: high-speed search and rigorous post-analysis. We should stick with our current plan of implementing Cover Redundancy in gather_results.py and not try to implement WKG in the GA.
