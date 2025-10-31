@@ -1,6 +1,6 @@
 import torch
 import random
-import intel_extension_for_pytorch as ipex
+# import intel_extension_for_pytorch as ipex # <-- DISABLED FOR TEST
 import pandas as pd
 import sys
 import time
@@ -11,7 +11,9 @@ import os
 from ga_utils import get_chromosome_stats_and_fitness
 
 # Set up device (GPU if available, fallback to CPU)
-device = torch.device("xpu:0" if hasattr(torch, "xpu") and torch.xpu.is_available() else "cpu")
+# --- MODIFIED: Forcing CPU to bypass the ipex ImportError ---
+device = torch.device("cpu")
+# device = torch.device("xpu:0" if hasattr(torch, "xpu") and torch.xpu.is_available() else "cpu")
 print(f"Using device: {device}")
 
 
@@ -290,205 +292,5 @@ def batched_mutation(child_population):
     rand_tensor = torch.rand(mutation_shape, device=child_population.device)
     mutation_mask = (rand_tensor < mutation_rate) # bool
     
-    rule_counts = child_population[:, :, :8] # int8
-    rules = child_population[:, :, 8:] # int8
-    
-    # (int8).logical_xor(bool) -> int8. This is correct and efficient.
-    mutated_rules = rules.logical_xor(mutation_mask)
-    
-    # (int8, int8) -> int8
-    mutated_population = torch.cat([rule_counts, mutated_rules], dim=2)
-    return mutated_population
-
-# ========== CHECKPOINT / FINAL WRITE FUNCTION ===================
-def write_results_file(is_final_write=False):
-    """
-    Writes the current best-so-far results to the output file.
-    This function is now used for both checkpointing and the final write.
-    """
-    global run_count, task_id, output_dir, PARAMS, overall_best_fitness_per_perm, IS_REAL_DATA_RUN, overall_best_population_final_state, X_real_cpu, y_real_cpu, gene_names, DATA_STATS
-
-    output_filename = os.path.join(output_dir, f"ga_results_{task_id}.txt")
-    if is_final_write:
-        print(f"\nWriting FINAL results to '{output_filename}'...")
-    else:
-        # This is noisy, let's print it less often
-        if run_count % 10 == 0:
-            print(f"--- Checkpointing results (Run {run_count}) to '{output_filename}'... ---")
-
-    try:
-        with open(output_filename, "w") as f:
-            f.write(f"--- PARAMETERS (Task {task_id}) ---\n")
-            for key, val in PARAMS.items():
-                f.write(f"{key}: {val}\n")
-            f.write(f"total_restarts_completed: {run_count}\n")
-            
-            # --- Write Best Fitness Scores ---
-            f.write("\n--- Best Fitness per Permutation (across all restarts) ---\n")
-            f.write("Permutation_Index, Best_Fitness, Is_Real_Data\n")
-            best_fitness_cpu = overall_best_fitness_per_perm.cpu()
-            for i in range(num_permutations_per_task):
-                is_real = (IS_REAL_DATA_RUN and i == 0)
-                f.write(f"{i}, {best_fitness_cpu[i].item():.8f}, {is_real}\n")
-
-            # --- If Task 0, decode and write the top rule sets ---
-            if IS_REAL_DATA_RUN:
-                f.write("\n--- Top 5 Rule Sets (from REAL data run [Permutation 0]) ---\n")
-                
-                if overall_best_population_final_state is None:
-                    f.write("No successful runs completed. No rules to show.\n")
-                    if is_final_write: # Only print error on final write
-                        print("Task 0: No best population saved. Skipping rule decode.")
-                    return # Exit function
-
-                # We must re-calculate fitness on the *saved best population*
-                # to find the top 5 chromosomes from that state.
-                # Use the *real data* (perm 0) for stats.
-                real_data_batch = data_batch[0].unsqueeze(0) # Shape [1, n_samples, n_features+1]
-                best_pop_batch = overall_best_population_final_state[0].unsqueeze(0) # Shape [1, pop_size, chrom_len]
-                
-                final_fitness_scores = calculate_fitness(best_pop_batch, real_data_batch)
-                
-                num_top_sets_to_show = 5
-                final_best_fitnesses, final_best_indices = torch.topk(final_fitness_scores, num_top_sets_to_show, dim=1)
-
-                # Move to CPU for decoding
-                final_best_indices_cpu = final_best_indices.cpu()[0] # [0] to unbatch
-                population_batch_cpu = best_pop_batch.cpu()[0] # [0] to unbatch
-
-                for i in range(num_top_sets_to_show):
-                    chrom_index = final_best_indices_cpu[i]
-                    chromosome_cpu = population_batch_cpu[chrom_index, :] # This is int8
-                    
-                    # --- Get Detailed Stats ---
-                    # Pass the global stats and param dictionaries
-                    stats = get_chromosome_stats_and_fitness(
-                        chromosome_cpu, X_real_cpu, y_real_cpu, 
-                        gene_names, DATA_STATS, PARAMS
-                    )
-                    
-                    if "error" in stats:
-                        f.write(f"\n--- Rank {i+1} (Error: {stats['error']}) ---")
-                        continue
-
-                    # --- Write Detailed Stats ---
-                    fb = stats['fitness_breakdown']
-                    cs = stats['chromo_stats']
-                    f.write(f"\n--- Rank {i+1} (Fitness: {fb['Final_Fitness']:.8f}) ---\n")
-                    f.write(f"  Chromosome Coverage:\n")
-                    f.write(f"    - Covered: {cs['n_unique_matches']} / {DATA_STATS['total_samples']} total samples\n")
-                    f.write(f"    - Positives: {cs['n_tp']} / {DATA_STATS['num_positives']} total positives\n")
-                    f.write(f"    - Negatives: {cs['n_fp']} / {DATA_STATS['num_negatives']} total negatives\n")
-                    
-                    f.write(f"  Fitness Calculation:\n")
-                    f.write(f"    - Subgroup Size Fraction (A): {fb['Subgroup_Size_Fraction']:.4f} ({cs['n_unique_matches']} / {DATA_STATS['total_samples']})\n")
-                    f.write(f"    - Local Pos Fraction (B):   {fb['Local_Pos_Fraction']:.4f} ({cs['n_tp']} / {cs['n_unique_matches']})\n")
-                    f.write(f"    - Global Pos Fraction (C):  {fb['Global_Pos_Fraction']:.4f} ({DATA_STATS['num_positives']} / {DATA_STATS['total_samples']})\n")
-                    f.write(f"    - WRAcc Quality (D = A*(B-C)): {fb['WRAcc_Quality']:.8f}\n")
-                    f.write(f"    - Overlap Ratio (E):          {fb['Overlap_Ratio']:.4f}\n")
-                    f.write(f"    - Final Fitness (D / E):      {fb['Final_Fitness']:.8f}\n")
-                    
-                    f.write(f"  Rules:\n")
-                    active_rule_count = 0
-                    for j, rule_stat in enumerate(stats['rule_stats']):
-                        rs = rule_stat
-                        # --- NEW: Only print rules that cover at least one sample ---
-                        if rs['n_matched'] > 0:
-                            active_rule_count += 1
-                            f.write(f"    - Rule {active_rule_count}: {rs['rule']}\n") # Use new counter
-                            f.write(f"      (Covers: {rs['n_matched']} total | {rs['n_pos']} Pos | {rs['n_neg']} Neg)\n")
-                    
-                    if active_rule_count == 0:
-                         f.write("    (No rules in this set covered any samples)\n")
-
-            else: # Permuted run task
-                if is_final_write:
-                    print("Permuted run task. No rules to print. Saving fitness scores.")
-                f.write("\n--- Permuted Run Task: No rule sets decoded. ---\n")
-
-    except Exception as e:
-        print(f"!!!!!!!!!!!!!! CRITICAL: FAILED TO WRITE RESULTS FILE !!!!!!!!!!!!!!")
-        print(f"Error: {e}")
-        # Also print to stdout in case file is locked
-        print(f"Task {task_id} Best Fitnesses: {overall_best_fitness_per_perm.cpu().tolist()}")
-
-
-# =================== MAIN GA LOOP (WRAPPER) =====================
-print(f"\nStarting repeated GA runs for up to {task_max_duration_seconds / 3600:.2f} hours...")
-
-# --- START THE NEW WRAPPER LOOP ---
-while (time.time() - task_start_time) < task_max_duration_seconds:
-    
-    run_count += 1
-    
-    # --- 1. CREATE A NEW POPULATION FOR THIS RUN ---
-    # This will be dtype torch.int8
-    base_population = torch.stack([generate_chromosome(device_to_use=device) for _ in range(population_size)])
-    population_batch = base_population.unsqueeze(0).repeat(num_permutations_per_task, 1, 1)
-
-    # --- 2. RUN A SINGLE, SHORT GA ---
-    current_run_best_fitness = torch.zeros(num_permutations_per_task, device=device)
-    
-    if run_count == 1:
-        print(f"\n--- GA Restart #{run_count} (Time: {time.time() - task_start_time:.0f}s) ---")
-    
-    start_time_inner = time.time()
-    
-    for gen in range(num_generations):
-        fitness_scores = calculate_fitness(population_batch, data_batch)
-        best_fitnesses, best_indices = torch.topk(fitness_scores, elitism_count, dim=1)
-        elite_individuals = torch.gather(population_batch, 1, best_indices.unsqueeze(2).expand(-1, -1, chromosome_length))
-        
-        current_run_best_fitness = torch.max(current_run_best_fitness, best_fitnesses[:, 0])
-        
-        parent_population = batched_selection(population_batch, fitness_scores)
-        child_population = batched_crossover(parent_population)
-        mutated_population = batched_mutation(child_population)
-        mutated_population[:, :elitism_count, :] = elite_individuals
-        population_batch = mutated_population
-
-        if (gen + 1) % 100 == 0 or (gen == 0 and run_count == 1): # Print logs on first run
-             if IS_REAL_DATA_RUN:
-                 print(f"  Restart {run_count} Gen {gen+1:3d}: Real(0) best: {current_run_best_fitness[0].item():.6f}, Avg others: {current_run_best_fitness[1:].mean().item():.6f}")
-             else:
-                 # Don't log every permuted run
-                 if run_count == 1:
-                    print(f"  Restart {run_count} Gen {gen+1:3d}: Avg best: {current_run_best_fitness.mean().item():.6f}")
-
-    end_time_inner = time.time()
-    
-    # Print less often to reduce log spam
-    if run_count % 10 == 0:
-        print(f"...Restart #{run_count} complete. Time: {end_time_inner - start_time_inner:.2f}s.")
-
-    # --- 3. COMPARE THIS RUN TO THE OVERALL BEST ---
-    new_best_mask = current_run_best_fitness > overall_best_fitness_per_perm
-    
-    if new_best_mask.any():
-        overall_best_fitness_per_perm[new_best_mask] = current_run_best_fitness[new_best_mask]
-        
-        if IS_REAL_DATA_RUN and new_best_mask[0]:
-            print(f"!!! Task 0 Found New Best Real Fitness: {overall_best_fitness_per_perm[0].item():.8f} !!!")
-            overall_best_population_final_state = population_batch.clone()
-        
-        # Always update overall bests for reporting
-        if IS_REAL_DATA_RUN:
-            print(f"--- Overall Best After {run_count} Restarts: Real(0) {overall_best_fitness_per_perm[0].item():.6f}, Avg others {overall_best_fitness_per_perm[1:].mean().item():.6f} ---")
-        elif run_count == 1: # Only print first time for permuted
-            print(f"--- Overall Best After {run_count} Restarts: Avg {overall_best_fitness_per_perm.mean().item():.6f} ---")
-
-    # --- 4. WRITE CHECKPOINT ---
-    # This writes the best-so-far to the output file every single restart.
-    write_results_file(is_final_write=False)
-
-# --- END OF THE NEW WRAPPER LOOP ---
-
-print(f"\n...Time limit reached. Total GA restarts: {run_count}.")
-
-
-# =================== FINAL RESULTS =====================
-# Write the final results one last time to ensure it's 100% up to date.
-write_results_file(is_final_write=True)
-
-print(f"\nTask {task_id} complete. Final results saved.")
+    rule_counts
 
