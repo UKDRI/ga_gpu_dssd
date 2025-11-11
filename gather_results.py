@@ -74,14 +74,16 @@ def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
 
     # 2. Add Individual Rules from Rank 1
     for i, rule in enumerate(task_0_rules):
-        # Truncate long rule strings for the label
-        rule_str_short = rule['rule_str']
-        if len(rule_str_short) > 70:
-            rule_str_short = rule_str_short[:70] + "..."
-        
-        labels.append(f"Rank 1, Rule {rule['rule_num']}: {rule_str_short}")
-        pos_counts.append(rule['n_pos'])
-        neg_counts.append(rule['n_neg'])
+        # --- Filter out 0-cover rules from plot ---
+        if (rule['n_pos'] + rule['n_neg']) > 0:
+            # Truncate long rule strings for the label
+            rule_str_short = rule['rule_str']
+            if len(rule_str_short) > 70:
+                rule_str_short = rule_str_short[:70] + "..."
+            
+            labels.append(f"Rank 1, Rule {rule['rule_num']}: {rule_str_short}")
+            pos_counts.append(rule['n_pos'])
+            neg_counts.append(rule['n_neg'])
 
     # We plot positives as negative values to go left
     pos_counts_negative = [-p for p in pos_counts]
@@ -335,6 +337,9 @@ def gather_and_analyze(results_directory):
             print(f"Error reading file {f_name}: {e}")
             continue
 
+    # --- Analysis ---
+    summary_lines = [] # Initialize here
+
     # --- NEW: Load data for Cover Redundancy ---
     X_data_cpu = None
     gene_names_list = []
@@ -351,7 +356,8 @@ def gather_and_analyze(results_directory):
     try:
         X_df = pd.read_csv(x_file)
         gene_names_list = X_df.columns.tolist()
-        X_data_cpu = torch.tensor(X_df.values, dtype=torch.int32)
+        # --- FIXED: Use int8 to match our optimized data ---
+        X_data_cpu = torch.tensor(X_df.values, dtype=torch.int8)
         print(f"\nLoaded {x_file} for Cover Redundancy calculation.")
         
         # --- Calculate Cover Redundancy ---
@@ -387,7 +393,13 @@ def gather_and_analyze(results_directory):
 
     summary_lines.insert(0, f"--- PARAMETERS (from Task 0) ---")
     param_lines = [f"{key}: {val}" for key, val in task_0_params.items()]
-    summary_lines[1:1] = param_lines # Insert params after header
+    summary_lines.insert(1, "\n".join(param_lines)) # Insert params after header
+
+    summary_lines.extend([
+        "--- Final Permutation Test ---",
+        f"Real Data Fitness: {real_fitness:.8f}",
+        f"Total Permuted Runs Found: {len(all_perm_fitnesses)}"
+    ])
 
     if len(all_perm_fitnesses) > 0:
         perm_array = np.array(all_perm_fitnesses)
@@ -467,4 +479,3 @@ if __name__ == "__main__":
 
     print(f"--- Running Analysis on Directory: {os.path.abspath(target_dir)} ---")
     gather_and_analyze(target_dir)
-
