@@ -26,12 +26,14 @@ BASE_DIR=${SLURM_SUBMIT_DIR}
 echo "Task $SLURM_ARRAY_TASK_ID: Purging modules and loading DAWN environment..."
 module purge
 module load default-dawn
+# --- RESTORED the correct conda environment activation ---
 module load intelpython-conda
 conda activate pytorch-gpu
 
 # --- Verify Environment ---
 echo "Task $SLURM_ARRAY_TASK_ID: Running on node: $(hostname)"
-echo "Task $SLURM_ARRAY_TASK_ID: Python path: $(which python)"
+# 'python3' should now point to the correct one from the activated env
+echo "Task $SLURM_ARRAY_TASK_ID: Python path: $(which python3)"
 echo "Task $SLURM_ARRAY_TASK_ID: Current directory: $(pwd)" # Will be BASE_DIR
 
 # --- Run the script ---
@@ -40,3 +42,4 @@ echo "Task $SLURM_ARRAY_TASK_ID: Starting Python GA script..."
 python3 ${BASE_DIR}/simple_ga_array.py $SLURM_ARRAY_TASK_ID ${BASE_DIR} ${OUTPUT_DIR} ${JOB_TIME_MINS}
 
 echo "Task $SLURM_ARRAY_TASK_ID complete."
+
