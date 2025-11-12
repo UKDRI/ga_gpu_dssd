@@ -1,16 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=gpu_ga_TEST
+#SBATCH --job-name=gpu_ga_10HR_100job_PROD
 #SBATCH --partition=pvc9
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH -A AIRR-P13-DAWN-GPU
 
-# --- 10 MINUTE TEST CONFIG ---
-# (Run 20 jobs for 10 minutes each)
-#SBATCH --array=0-19
-#SBATCH --time=00:10:00
-export JOB_TIME_MINS=10
+# --- 10 HOUR / 100 JOB PRODUCTION RUN ---
+# (Run 100 jobs for 10 hours 15 min each)
+#SBATCH --array=0-99
+#SBATCH --time=10:15:00
+export JOB_TIME_MINS=615 # 10 hours * 60 + 15 min safety
 
 
 # --- Get Output Directory from submit_ga.sh ---
@@ -28,6 +28,7 @@ module purge
 module load default-dawn
 # --- RESTORED the correct conda environment activation ---
 module load intelpython-conda
+# --- FIXED TYPO: Was 'pytch-gpu' ---
 conda activate pytorch-gpu
 
 # --- Verify Environment ---
