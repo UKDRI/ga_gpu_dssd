@@ -45,8 +45,8 @@ print(f"--- Job Time Limit (Minutes): {task_time_limit_mins} ---")
 num_permutations_per_task = 10
 num_features = 1000
 num_generations = 300       # Generations *per restart*
-# OPTIMIZED: We can now increase this, e.g., to 100 or 120, thanks to int8
-population_size = 100       # Population size per GA (was 55)
+# OPTIMIZED: We can now increase this, e.g., to 100 or 120, thanks to int8 ** UPDATE 55 seems limit.
+population_size = 55       # Population size per GA (was 55)
 IS_REAL_DATA_RUN = (task_id == 0)
 
 print(f"--- Using Population Size: {population_size} ---")
