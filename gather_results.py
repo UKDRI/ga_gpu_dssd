@@ -73,8 +73,8 @@ def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
     neg_counts.append(task_0_params.get('num_negatives', 0))
 
     # 2. Add Individual Rules from Rank 1
+    # --- ADDED: Filter for 0-cover rules ---
     for i, rule in enumerate(task_0_rules):
-        # --- Filter out 0-cover rules from plot ---
         if (rule['n_pos'] + rule['n_neg']) > 0:
             # Truncate long rule strings for the label
             rule_str_short = rule['rule_str']
@@ -232,7 +232,10 @@ def gather_and_analyze(results_directory):
                         in_fitness_section = True
                         in_rules_section = False
                         continue
-                    elif "Top 5 Rule Sets" in line:
+                    # --- FIX: Stop at Rank 2 for CR ---
+                    elif "--- Rank 2 (Fitness:" in line:
+                        in_rules_section = False # Stop parsing for CR
+                    elif "Top 5 Rule Sets" in line or "Top " in line and " Rule Sets" in line: # More general
                         in_params_section = False
                         in_fitness_section = False
                         in_rules_section = True
@@ -286,7 +289,10 @@ def gather_and_analyze(results_directory):
                     elif in_rules_section and is_task0_file:
                         # Add raw line to summary text
                         current_rules_text.append(line) 
-                        top_k_rules_text_for_cr.append(line) # Add all rule/stat lines
+                        
+                        # --- FIX: Only add to CR if Rank 1 ---
+                        if current_rank <= 1:
+                            top_k_rules_text_for_cr.append(line) # Add all rule/stat lines
 
                         # --- Grab Global Stats if we don't have them ---
                         if 'num_positives' not in task_0_params:
@@ -339,6 +345,20 @@ def gather_and_analyze(results_directory):
 
     # --- Analysis ---
     summary_lines = [] # Initialize here
+    
+    # --- NEW: Also try to parse overlap ratio ---
+    overlap_ratio = None
+    if task0_file_found:
+        try:
+            with open(os.path.join(results_directory, "ga_results_0.txt"), 'r') as f:
+                for line in f:
+                    or_match = re.search(r"- Overlap Ratio \(E\):\s+([\d\.]+)", line)
+                    if or_match:
+                        overlap_ratio = float(or_match.group(1))
+                        break # Found it
+        except Exception as e:
+            print(f"Warning: Could not parse Overlap Ratio from ga_results_0.txt. {e}")
+
 
     # --- NEW: Load data for Cover Redundancy ---
     X_data_cpu = None
@@ -356,7 +376,7 @@ def gather_and_analyze(results_directory):
     try:
         X_df = pd.read_csv(x_file)
         gene_names_list = X_df.columns.tolist()
-        # --- FIXED: Use int8 to match our optimized data ---
+        # --- CHANGED: Use int8 for memory ---
         X_data_cpu = torch.tensor(X_df.values, dtype=torch.int8)
         print(f"\nLoaded {x_file} for Cover Redundancy calculation.")
         
@@ -368,7 +388,9 @@ def gather_and_analyze(results_directory):
             task_0_params.get('num_features', 1000) # Default to 1000 if not found
         )
         if cr_value is not None:
-            summary_lines.append(f"\nCover Redundancy (CR) of Top-K Set: {cr_value:.6f}")
+            summary_lines.append(f"\nCover Redundancy (CR) of Rank 1 Set: {cr_value:.6f}")
+            if overlap_ratio is not None:
+                 summary_lines.append(f"GA-Calculated Overlap Ratio (E): {overlap_ratio:.6f}")
             
     except FileNotFoundError:
         print(f"\nWarning: Could not find data file at {x_file}.")
@@ -479,3 +501,4 @@ if __name__ == "__main__":
 
     print(f"--- Running Analysis on Directory: {os.path.abspath(target_dir)} ---")
     gather_and_analyze(target_dir)
+
