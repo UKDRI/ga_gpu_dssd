@@ -1,150 +1,166 @@
-#+title: GPU-Accelerated Subgroup Discovery (Genetic Algorithm)
+#+title: GPU-Accelerated DSSD and EMM for Single-Cell Analysis
 #+author: Sam Neaves
-#+date: <2025-10-30>
+#+date: <2025-11-16>
 #+options: toc:2 num:nil
 #+property: header-args :eval never-export
 
-* Project Goal
+Project Goal
 
-This project uses a parallel Genetic Algorithm (GA) to discover statistically significant, interpretable rule sets (subgroups) from high-dimensional single-cell RNA-seq data.  
-The goal is to identify combinations of gene expression states (e.g., =Gene A = 1 AND Gene B = 0=) that are strongly associated with the Parkinson's disease (PD) phenotype.
+This project implements a multi-phase computational pipeline to identify and characterize disease-associated cellular states from high-dimensional single-cell RNA-seq data.
 
-The analysis runs on the *DAWN HPC*, utilizing its *Intel PVC GPUs* for accelerated computation.
+Phase 1 (Subgroup Discovery): Uses a custom-built, GPU-accelerated Genetic Algorithm (GA) to discover statistically significant, diverse subgroup sets (DSSD). These are interpretable rule sets (e.g., =Gene A=1 AND Gene B=0=) that are strongly associated with the Parkinson's disease (PD) phenotype.
 
-* Statistical Method: "Best-of-N-Repeats" Permutation Test
+Phase 2 (Exceptional Model Mining): Uses the DSSD program within an Apptainer container to identify regulatory networks. It searches for "description" genes that predict the expression of the biomarker set found in Phase 1, and contrasts these networks between PD and Control cells.
 
-To ensure our results are statistically significant and not random artifacts, we use a rigorous permutation test.
+The analysis runs on the DAWN HPC, utilizing its Intel PVC GPUs for Phase 1 and its CPU nodes for Phase 2.
 
-** The Problem
-A single GA run can get stuck in a *local optimum* (a good-but-not-great result).  
-If we run the GA 100 times on the real data but only once on the permuted data, it’s an unfair comparison.
+Phase 1: Genetic Algorithm (Subgroup Discovery)
 
-** The Solution
-We apply the *exact same computational effort* to the real data as to each of the 999 permuted datasets.
+** Statistical Method: Time-Limited Random-Restart Permutation Test
 
-** Our Method
-1. Create 1000 datasets (1 real, 999 permuted).  
-2. For each dataset, run the GA =num_repeats= times (e.g., 200 times) from different random starting points.  
-3. Record the *single best fitness score* from those 200 repeats.  
-4. This yields one "best-of-200" score for the real data and 999 "best-of-200" scores for the permuted data.  
-5. The *p-value* is computed by comparing the real score to the distribution of the permuted scores.
+To find the best possible solution and ensure its statistical significance, we employ a "random-restart" (or "best-of-N-restarts") strategy. This addresses the "Winner's Curse" and the risk of the GA converging on a poor local optimum.
 
-* File Descriptions
+The Array Job: The simple_ga.sh script launches a SLURM job array of 100 tasks (Task 0 for real data, Tasks 1-99 for permuted data).
 
-| File                  | Description                                                                                  |
-|------------------------+----------------------------------------------------------------------------------------------|
-| =submit_ga.sh=         | Main run script. Creates output dirs and submits jobs to SLURM.                             |
-| =run_ga_array.slurm=   | Internal SLURM job array script (=--array=0-999=). Sets up modules for each job.            |
-| =simple_ga_array.py=   | Core Python GA worker. One instance runs per task.                                          |
-| =gather_results.py=    | Post-processing analysis script to compute p-values and summary statistics.                 |
-| =sc_data/=             | Directory containing input data (=X_binary.csv=, =y_labels.csv=).                           |
+The Time Budget: Each of these 100 tasks is given a large time budget (e.g., 10 hours).
 
-** Task Breakdown
-- *Task 0:* Loads the real data, runs GA =num_repeats= times, saves best result to =ga_results_0.txt=  
-- *Tasks 1–999:* Each loads a permuted dataset, runs GA =num_repeats= times, and saves best result to =ga_results_X.txt=
+The "Random-Restart" Loop: Inside the 10-hour window, the simple_ga_array.py script runs a while(time.time()...) loop. This loop performs many (e.g., 150-200) independent, 300-generation GA "restarts."
 
-* Key Parameters (Inside =simple_ga_array.py=)
+Finding the "Champion": Each 10-hour job tracks the single best solution ("champion") it finds across all its restarts.
 
-#+begin_src python
-# Main GA configuration
-num_repeats = 200                # Number of GA runs per permutation (Best-of-N)
-num_generations = 1000           # Generations per GA run
-population_size = 55             # Max population fitting in GPU memory
-gene_inclusion_probability = 0.01  # Controls sparsity (~10 genes per rule)
-#+end_src
+The Final p-value: The gather_results.py script compares the "champion of the real data" (from Task 0) to the "distribution of champions from the 99 permuted jobs" (from Tasks 1-99).
 
-* How to Run the Full Experiment (10,000 GPU-hours)
+To further mitigate the "Winner's Curse," Task 0 tracks the Top 5 distinct, high-quality solutions it finds across all its restarts, presenting a more diverse set of final candidates.
 
-** Step 1: Clean Up & Prepare
-Ensure your scripts (=submit_ga.sh=, =run_ga_array.slurm=, =simple_ga_array.py=, =gather_results.py=)  
-are in your main directory: =/home/dn-neav1/gpu_ga=
+** Key GA Parameters
 
+=population_size = 55=: The maximum population size that can fit within the ~128GB of VRAM on a single PVC GPU, given our highly parallelized tensor operations.
+
+=num_generations = 300=: The "depth" of a single GA run. This is optimized for fast local convergence.
+
+=JOB_TIME_MINS= (in =run_ga_array.slurm=): The "breadth" of the search. A 10-hour (615 min) budget allows for hundreds of restarts, ensuring robust global exploration.
+
+** GA File Descriptions
+
+File
+
+Description
+
+=simple_ga.sh=
+
+Main submission script. Launches the GA array and the dependent gather job.
+
+=run_ga_array.slurm=
+
+SLURM script for the main GA array job. Sets up the pytorch-gpu environment and passes the time limit.
+
+=simple_ga_array.py=
+
+Core Python GA worker. Runs the time-limited while loop of many restarts.
+
+=ga_utils.py=
+
+Shared Python functions for CPU-based rule decoding and stats calculation.
+
+=run_gather.slurm=
+
+SLURM script for the post-processing 'gather' job. Runs after the array finishes.
+
+=gather_results.py=
+
+Analyzes all ga_results_*.txt files. Computes p-value, Cover Redundancy, and generates plots.
+
+=sc_data/=
+
+Directory containing input data (=X_binary.csv=, =y_labels.csv=).
+
+Phase 2: Exceptional Model Mining (EMM)
+
+This phase uses the original DSSD program (running in wine inside an apptainer container) to perform EMM. It identifies "description" genes (potential regulators) that best predict the expression pattern of the biomarker set discovered in Phase 1. This analysis is run separately on the PD and Control cell populations to find "disease-specific network rewiring."
+
+** EMM File Descriptions
+
+File
+
+Description
+
+=wine-test-dssd.sif=
+
+The apptainer container image containing the dssd.exe binaries.
+
+=prepare_emm_data.py=
+
+Python script to prepare data for DSSD. Splits X_binary.csv into PD/Ctrl groups and creates the required .arff and .emm files.
+
+=dssd_pd.conf=
+
+Config file for the DSSD run on PD patients. Sets measure = WKL.
+
+=dssd_ctrl.conf=
+
+Config file for the DSSD run on Control patients.
+
+=run_emm.slurm=
+
+SLURM script to launch the apptainer job on a pvc9 node. It runs the EMM analysis for both PD and Ctrl groups.
+
+How to Run the Full Pipeline
+
+** Step 1: Run the Phase 1 GA (Biomarker Discovery)
+
+Set parameters in =run_ga_array.slurm= (e.g., --array=0-99, --time=10:15:00).
+
+Make scripts executable:
 #+begin_src bash
-# Clean up previous runs
-rm -f slurm-*.out
-rm -f ga_results_*.txt
-rm -rf ga_run_*
+chmod +x simple_ga.sh
+chmod +x run_ga_array.slurm
+chmod +x run_gather.slurm
 #+end_src
 
-** Step 2: Create a New Output Directory
-Create a directory for this run. All logs and results will go here.
-
+Launch the automated workflow. This single command will run the 100-job array and automatically run the gather script when it's done.
 #+begin_src bash
-mkdir ga_run_pop55_gen1000_rep200
+./simple_ga.sh ./11nov_prod_10hr_100jobs
 #+end_src
 
-** Step 3: Submit the Job Array
-Submit the full GA array job via SLURM.  
-The first argument is your output directory, the second is the walltime (safe limit: 10 hours 15 minutes).
-
+When complete, check the results in the output directory:
 #+begin_src bash
-# Usage:
-./submit_ga.sh <output_dir> --time=HH:MM:SS
+ls ./11nov_prod_10hr_100jobs/
 
-# Example:
-./submit_ga.sh ga_run_pop55_gen1000_rep200 --time=10:15:00
+final_summary.txt  fitness_histogram.png  subgroup_analysis.png ...
+
 #+end_src
 
-** Step 4: Monitor the Job
+** Step 2: Run the Phase 2 EMM (Regulatory Network Discovery)
 
-Check job status:
+First, prepare the data. Use the --k argument to select a random subset of description genes (e.g., 900) for the test.
 #+begin_src bash
-squeue -u $(whoami)
+
+(Load the conda env first)
+
+module purge
+module load default-dawn
+module load intelpython-conda
+conda activate pytorch-gpu
+
+Run the prep script
+
+python3 prepare_emm_data.py --k 900
 #+end_src
 
-You’ll see ~64 jobs running/configuring (R/CF) and ~936 pending (PD) — this is due to the 64-GPU user limit.  
-Jobs will complete sequentially over ~6.5 days.
-
-View SLURM output logs:
+Make the EMM run script executable:
 #+begin_src bash
-ls ga_run_pop55_gen1000_rep200/logs/output/
+chmod +x run_emm.slurm
 #+end_src
 
-* How to Analyze Results (After Job Array Completes)
-
-Once =squeue -u $(whoami)= shows no jobs left, all 1000 tasks are done.
-
-** Step 1: Run the Gather Script
-Run the summarization step on the login node.
-
+Submit the EMM job to SLURM.
 #+begin_src bash
-# Usage:
-python3 gather_results.py <output_dir>
-
-# Example:
-python3 gather_results.py ga_run_pop55_gen1000_rep200
+sbatch run_emm.slurm
 #+end_src
 
-** Step 2: Check the Output
-Example output:
-
-#+begin_example
---- Final Permutation Test (Best-of-N Repeats) ---
-Real Data Best-of-N Fitness: 0.030902 (from Task 0)
-Total Permuted Runs Found: 999
-Max Permuted Fitness (Best-of-N): 0.024391
-Avg Permuted Fitness (Best-of-N): 0.014825
-Std Dev Permuted Fitness (Best-of-N): 0.003419
-
-Empirical p-value: (0 + 1) / (999 + 1) = 0.0010
-
---- Top Rule Set (from Task 0) ---
-  Rule 1: TPPP=0 AND SEC62=0 AND COX6C=0 AND ...
-  Rule 2: NLGN4Y=0 AND COL5A1=0 AND FUNDC2=0 AND ...
-#+end_example
-
-** Step 3: View the Saved Summary
-A file named =final_summary_best_of_N.txt= will be saved inside your output directory:
-
+Check the results. DSSD will create its own output folders inside emm_results/.
 #+begin_src bash
-cat ga_run_pop55_gen1000_rep200/final_summary_best_of_N.txt
-#+end_src
+ls ./emm_results/
 
----
+pd_run-1762972624/  ctrl_run-1762972625/ ...
 
-*Notes:*  
-This Org file can be exported to PDF or HTML with:
-#+begin_src emacs-lisp
-M-x org-export-dispatch
 #+end_src
-Choose `h` for HTML or `p` for PDF (via LaTeX).
