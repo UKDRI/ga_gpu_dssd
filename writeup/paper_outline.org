@@ -68,7 +68,6 @@ We implemented a two-tier parallel architecture on the DAWN supercomputer (Intel
 * Results
 ** Computational Performance
 - *Throughput:* The framework executed *7,200 Physical GPU-hours* in a single 3-day run.
-- *Effective Scale:* Because each node ran 10 searches in parallel, this corresponds to *72,000 hours of effective sequential search time*.
 - *Search Volume:* Across 100 nodes, the system performed millions of generations and thousands of independent restarts, creating a high-confidence "noise floor."
 
 ** Statistical Significance
