@@ -4,25 +4,35 @@
 #+OPTIONS: toc:nil num:t
 
 * Abstract
-- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet these cells do not fail in a uniform manner. Single-cell RNA sequencing (scRNA-seq) reveals high heterogeneity, but identifying robust, combinatorial gene signatures that define *distinct neuronal failure modes* remains a computational challenge.
-- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) to this problem, modeling neuronal heterogeneity as a collection of distinct rules. To navigate the vast search space, we developed a *Hierarchical Parallel Genetic Algorithm*. The framework deployed 100 GPU nodes, with each node simultaneously executing 10 independent search instances via tensor batching.
-- Rigor :: We strictly enforced an *"Equal Computational Effort"* principle. We performed a massive-scale permutation test where the real dataset and 999 randomized datasets were each subjected to exactly *72 hours* of rapid-cycle evolutionary search (population 55, restarting every 300 generations).
-- Results :: The framework executed a deep search equivalent to ~72,000 hours of sequential computation. It identified a combinatorial gene signature in PD dopaminergic neurons with a fitness score that was statistically unreachable by chance ($p < 0.001$). This signature defines a robust, non-overlapping cell state distinct from general stress responses.
+- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet this process is not uniform. Single-cell RNA sequencing (scRNA-seq) reveals high heterogeneity, but standard methods often fail to capture robust, combinatorial gene signatures that define distinct cell states. This includes not only "failure modes" specific to PD but also "healthy states" found in controls that are lost during disease progression.
+- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) to this problem. Unlike standard methods that seek a single "best" rule, our framework evolves a *set* of subgroup descriptions simultaneously. Each description defines a subset of cells where the distribution of disease labels significantly deviates from the overall population. To navigate the vast search space, we developed a *Parallel Genetic Algorithm (GA)* optimized for GPU acceleration.
+- Rigor :: We addressed the "look-elsewhere" effect inherent in high-dimensional mining by implementing a massive-scale permutation test. We ran independent parallel searches on real and randomized neuronal data using an *"Equal Computational Effort"* principle (100 nodes x 72 hours).
+- Results :: The framework executed a deep search equivalent to ~72,000 hours of sequential computation. It identified a combinatorial gene signature with a fitness score statistically unreachable by chance ($p < 0.001$). This signature defines a robust, non-overlapping cell state that provides a precise molecular definition of specific neuronal subpopulations.
 - Conclusion :: This study demonstrates that DSSD, powered by parallel GPU computing and rigorous statistics, is a powerful paradigm for untangling the heterogeneity of dopaminergic neurodegeneration.
 
 * Introduction
-** The Biological Challenge: The "Mixed Bag" of PD Neurons
-- Parkinson's Disease primarily affects dopaminergic neurons in the substantia nigra, but degeneration is asynchronous and heterogeneous.
-- *The Core Hypothesis:* "Non-overlapping subgroups" in scRNA-seq data correspond to *distinct neuronal states* or molecular failure modes (e.g., mitochondrial collapse vs. synaptic dysfunction).
+** The Biological Challenge: Gain of Dysfunction and Loss of Health
+- Parkinson's Disease primarily affects dopaminergic neurons, but degeneration is asynchronous. At any given moment, the tissue contains a "mixed bag" of cells.
+- *The Core Hypothesis:* We posit that "non-overlapping subgroups" in scRNA-seq data correspond to *distinct neuronal states*.
+  - These can be *PD-Specific States* (e.g., a subgroup defined by mitochondrial collapse).
+  - Crucially, they can also be *CTRL-Specific States* (e.g., a high-functioning metabolic state) that are present in healthy controls but vanish in the disease.
+- Standard differential expression averages these signals across the entire population, washing out the specific combinatorial logic of these distinct states.
 
-** The Computational Challenge
-- *The Search Space:* Finding the specific combinations of genes that define these states requires searching an astronomically large solution space ($2^{1000}$ combinations).
-- *The Interpretability Gap:* "Black box" AI can classify PD neurons but cannot explain the underlying molecular mechanisms.
-- *The Solution:* Diverse Subgroup Set Discovery (DSSD) generates interpretable "IF-THEN" rules, but validating them requires immense compute power to distinguish true biological signal from noise.
+** The Computational Definition: What is a Subgroup?
+- We define a "Subgroup Description" as a logical rule (e.g., =IF Gene A is Low AND Gene B is High=) that selects a specific subset of cells.
+- A subgroup is considered "interesting" if the *distribution of labels* (PD vs. CTRL) within the subset is significantly different from the label distribution of the overall population.
+- For example, if the global population is 50% PD, a subgroup description identifying a set of cells that is 90% PD (or 90% CTRL) represents a strong biological signal.
+
+** Why DSSD? Optimizing Sets over Singletons
+- Standard Subgroup Discovery algorithms are greedy: they find the single "best" rule, often resulting in redundancy (many slight variations of the same rule).
+- *Diverse Subgroup Set Discovery (DSSD):* We treat the identification of cell states as a *Set Optimization Problem*.
+- Instead of scoring individual rules, we use a single holistic fitness function to evaluate a *set* of rules (a chromosome) simultaneously.
+- This function rewards the *Quality* (distinct label distribution) of individual subgroups while heavily penalizing *Overlap* between them. This forces the algorithm to find *distinct* cell states—mapping the heterogeneity of the tissue rather than just finding the largest common factor.
 
 ** Our Approach: Parallel DSSD on GPUs
-- We present a framework that treats identifying PD cell states as a massive combinatorial optimization problem.
-- *Parallelism as an Enabler:* We combine the population-based search of Genetic Algorithms with the tensor throughput of GPUs to solve the computational bottleneck.
+- *The Search Space:* Finding these sets requires searching an astronomically large solution space ($2^{1000}$ combinations).
+- *Parallelism as an Enabler:* We combine the population-based search of Genetic Algorithms with the tensor throughput of GPUs to solve this computational bottleneck.
+- *Robust Statistics:* We use this massive power to rigorously falsify discovered neuronal states against null models, ensuring biological relevance.
 
 * Methods
 ** Single-Cell Data Preprocessing
@@ -47,8 +57,8 @@ We implemented a two-tier parallel architecture on the DAWN supercomputer (Intel
 - *Strategy:* Standard GAs often stagnate in local optima. To maximize exploration, we implemented a *Random Restart* strategy.
 - *Micro-Cycle Parameters:*
   - Population Size: 55
-  - Run Length: 300 Generations (approx. [X] seconds per burst).
-  - Action: At generation 300, the best individual is archived, and the population is fully re-initialized.
+  - Run Length: 300 Generations.
+  - Action: At generation 300, the best individual (Set of Rules) is archived, and the population is fully re-initialized.
 - *Macro-Protocol:* This cycle repeats continuously for a strict *72-hour wall-clock limit*, ensuring deep exploration of the landscape for both real and null models.
 
 ** Statistical Validation
@@ -66,8 +76,8 @@ We implemented a two-tier parallel architecture on the DAWN supercomputer (Intel
 - *Interpretation:* This confirms that the discovered neuronal subgroup is not a statistical artifact but a genuine biological phenomenon rooted in the disease pathology.
 
 ** The Interpretable PD Signature
-- *Distinct Cell States:* The top-ranking rule set identified a subgroup of neurons defined by the combinatorial state of *[Gene A]* and *[Gene B]*.
-- *Biological Insight:* (Discuss how this specific combination points to a distinct failure mode in dopaminergic neurons, validating the premise that non-overlapping subgroups represent real biological states).
+- *Distinct Cell States:* The top-ranking rule set identified a non-overlapping subgroup of neurons defined by the combinatorial state of *[Gene A]* and *[Gene B]*.
+- *Biological Insight:* (Discuss whether this state represents a specific failure mode unique to PD, or a healthy metabolic state unique to Controls that is lost in the disease).
 
 * Discussion
 ** DSSD as a Tool for Single-Cell Neuroscience
