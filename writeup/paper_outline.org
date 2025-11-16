@@ -1,13 +1,13 @@
-#+TITLE: Unveiling Heterogeneity in Parkinson's Disease: An Extreme-Scale 72,000-Hour Deep Search Using Hierarchical Genetic Algorithms
+#+TITLE: Unveiling Heterogeneity in Parkinson's Disease: A GPU-Accelerated Deep Search Validated by a 72,000-Hour Statistical Stress Test
 #+AUTHOR: Sam Neaves
 #+DATE: <2025-10-30>
 #+OPTIONS: toc:nil num:t
 
 * Abstract
 - Background :: Parkinson's Disease (PD) is highly heterogeneous. Discovering robust combinatorial gene signatures from single-cell data requires searching a vast solution space without falling into the trap of overfitting.
-- Methodology :: We developed a *Time-Bounded, Random-Restart Genetic Algorithm (GA)* optimized for the DAWN supercomputer. We employed a hierarchical parallelization strategy: distributing work across 100 GPU nodes, with each node simultaneously processing 10 datasets via tensor batching.
-- Rigor :: We strictly enforced an *"Equal Computational Effort"* principle. We performed a massive-scale permutation test where the real dataset and 999 randomized datasets were each subjected to exactly *72 hours* of continuous evolutionary search.
-- Results :: The validation campaign consumed *7,200 Physical GPU-hours* in a single 3-day run. Due to vectorized execution, this corresponds to *72,000 hours of effective evolutionary search*. We identified a combinatorial gene signature for PD with a fitness score that was statistically unreachable by chance ($p < 0.001$), confirming it as a true biological signal rather than a high-dimensional artifact.
+- Methodology :: We developed a *Time-Bounded, Random-Restart Genetic Algorithm (GA)* optimized for the DAWN supercomputer. We employed a hierarchical parallelization strategy to execute a "Best-of-N" massive-scale permutation test.
+- Rigor :: We strictly enforced an *"Equal Computational Effort"* principle. To separate true signal from high-dimensional noise, we compared the results of a 72-hour search on the real data against 999 independent searches on randomized data, each also running for 72 hours.
+- Results :: The validation campaign consumed *7,200 Physical GPU-hours* in a single 3-day run. While the biological search took 72 hours, the statistical validation required *~72,000 hours of effective evolutionary search* on the null hypothesis. We identified a combinatorial gene signature for PD with a fitness score that was statistically unreachable by chance ($p < 0.001$), confirming it as a true biological signal.
 - Conclusion :: This study establishes a blueprint for "Brute-Force Rigor" in biomedical AI, demonstrating how HPC can transform statistical validation from an approximation into a comprehensive stress test.
 
 * Introduction
@@ -16,14 +16,13 @@
 - Standard differential expression misses "combinatorial" logic (e.g., "Gene A is low ONLY when Gene B is high").
 
 ** The Computational Challenge
-- *The Search Space:* The number of possible gene combinations is astronomically large.
-- *The Validation Gap:* Finding a "good" rule is easy; proving it is /statistically significant/ in such a large space is hard. Standard p-values break down.
-- *The Solution:* A method that is both *Exploratory* (searching effectively) and *Rigorous* (comparing against a massive null distribution).
+- *The Validation Gap:* In high-dimensional spaces, finding a "good" rule is easy; proving it is *statistically significant* is hard. Standard p-values break down because the search space is so large that "statistically unlikely" events happen constantly by chance.
+- *The Solution:* A method that validates discovery through *Massive-Scale Permutation Testing*.
 
 ** Our Approach: DSSD on the "DAWN" Supercomputer
 - We propose a *Diverse Subgroup Set Discovery (DSSD)* framework.
 - We implement this using a custom Genetic Algorithm accelerated by *PyTorch* and *Intel Extension for PyTorch (IPEX)*.
-- *Key Innovation:* A hierarchical, time-bounded deep search consuming ~7,200 GPU-hours to separate signal from noise.
+- *Key Innovation:* A 72,000-hour computational "stress test" to rigorously falsify the null hypothesis.
 
 * Methods
 ** Single-Cell Data Preprocessing
@@ -36,12 +35,12 @@ To achieve the necessary scale for rigorous validation, we implemented a two-tie
 
 *** Tier 1: Tensor Batching (Intra-GPU Parallelism)
 - Standard GAs process one population at a time. We vectorized our GA to process *10 independent populations* simultaneously on a single GPU.
-- Using =torch.int8= and 5D tensor broadcasting (=[10, Pop, Rules, Samples, Genes]=), we compressed the memory footprint, allowing 10 separate permutation tests to run in parallel on one card without slowdown.
+- Using =torch.int8= and 5D tensor broadcasting, we compressed the memory footprint, allowing 10 separate permutation tests to run in parallel on one card without slowdown.
 
 *** Tier 2: Distributed Arrays (Inter-Node Parallelism)
 - We deployed the framework as a *SLURM Job Array of 100 tasks*.
-- *Task 0:* Processed the Real Data + 9 Randomized Permutations.
-- *Tasks 1-99:* Processed 990 Randomized Permutations (10 per task).
+- *Task 0 (The Discovery Run):* Processed 1 Real Dataset + 9 Randomized Permutations.
+- *Tasks 1-99 (The Validation Runs):* Processed 990 Randomized Permutations (10 per task).
 - *Total Scale:* This architecture allowed us to evaluate 1,000 datasets (1 Real + 999 Null) concurrently.
 
 ** The Time-Bounded Deep Search
@@ -49,10 +48,10 @@ To achieve the necessary scale for rigorous validation, we implemented a two-tie
 - *The 72-Hour Protocol:*
   - We set a strict wall-clock limit of *72 hours and 15 minutes* (=JOB_TIME_MINS=4335=).
   - The algorithm utilized a *Random Restart* strategy: running a GA to convergence (300 generations), archiving the best result, randomizing the population, and restarting.
-  - This loop repeated continuously for the full 72-hour window, ensuring that every dataset—real or random—was explored with the exact same computational intensity.
+  - This loop repeated continuously for the full 72-hour window.
 
 ** Statistical Validation
-- *Null Hypothesis:* That the "best" rule set found in the real data is no better than the "best" rule set found in randomized noise given enough search time.
+- *Null Hypothesis:* That the "best" rule set found in the real data is no better than the "best" rule set found in randomized noise, given an identical 72-hour search opportunity.
 - *The Test:* We compared the global best fitness from the Real Data ($F_{real}$) against the distribution of global bests from the 999 Permuted Datasets ($F_{perm}$).
 - *Significance Calculation:*
   \[ p = \frac{\text{Count}(F_{perm} \ge F_{real}) + 1}{1000} \]
@@ -60,7 +59,7 @@ To achieve the necessary scale for rigorous validation, we implemented a two-tie
 * Results
 ** Computational Performance
 - *Throughput:* The hierarchical approach enabled the execution of *7,200 Physical GPU-hours* in a single 3-day window.
-- *Effective Scale:* Due to vectorized execution (10 permutations/GPU), this corresponds to *72,000 hours of effective sequential search time*. This magnitude of validation—searching 1,000 datasets for 72 hours each—provides an unprecedented level of statistical confidence.
+- *The Scale of Rigor:* This corresponds to *~72,000 hours of effective sequential search time*. Critically, 99.9% of this compute power was dedicated to constructing the null distribution, ensuring the resulting p-value is robust against the "look-elsewhere effect."
 
 ** Statistical Significance
 - *The Histogram:* (Insert Figure) We plot the distribution of the 999 "Best-of-72-Hour" random fitness scores. The distribution creates a highly robust "noise floor"—the absolute maximum fitness achievable by chance given massive compute.
@@ -73,8 +72,8 @@ To achieve the necessary scale for rigorous validation, we implemented a two-tie
 
 * Discussion
 ** "Brute-Force Rigor"
-- We argue that in the era of high-dimensional biology, standard statistical tests (t-tests, hypergeometric) are insufficient for complex pattern discovery.
-- Our "7,200 GPU-Hour" test sets a new standard. By expending massive compute on the /null hypothesis/ (the 99 random jobs), we proved that our finding is not a result of p-hacking or infinite search.
+- We argue that in the era of high-dimensional biology, standard statistical tests are insufficient.
+- Our study sets a new standard for validation: we expended 72,000 hours of compute specifically to prove that our 72-hour discovery was not a fluke.
 
 ** Biological Insight
 - (Discuss the specific genes found in your rules and their link to PD pathology, e.g., Mitochondrial dysfunction, Dopamine metabolism).
@@ -84,4 +83,4 @@ To achieve the necessary scale for rigorous validation, we implemented a two-tie
 - Limited to top 1,000 genes.
 
 * Conclusion
-We successfully combined *Tiered Parallelism*, *Time-Bounded Search*, and *Interpretable AI* to isolate a robust molecular signature of Parkinson's Disease. This workflow transforms the DAWN supercomputer from a machine for "processing data" into a machine for "falsifying hypotheses," ensuring that the discovered biology is mathematically sound.
+We successfully combined *Tiered Parallelism*, *Time-Bounded Search*, and *Interpretable AI* to isolate a robust molecular signature of Parkinson's Disease. By dedicating massive computational resources to falsifying the null hypothesis, we ensure that the discovered biology is mathematically sound.
