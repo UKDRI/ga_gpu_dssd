@@ -4,17 +4,16 @@
 #+OPTIONS: toc:nil num:t
 
 * Abstract
-- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet these cells do not fail in a uniform manner. Single-cell RNA sequencing (scRNA-seq) reveals high heterogeneity, but identifying robust, combinatorial gene signatures that define *distinct neuronal failure modes* remains a computational challenge. Standard methods often miss complex, non-overlapping subgroups that represent specific disease states.
-- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) to this problem, using it to model neuronal heterogeneity as a collection of distinct, interpretable rules. To navigate the vast search space, we developed a *Parallel Genetic Algorithm (GA)* optimized for GPU acceleration. This framework leverages hierarchical parallelism to explore combinatorial gene interactions with unprecedented depth.
-- Rigor :: We addressed the "look-elsewhere" effect inherent in high-dimensional mining by implementing a massive-scale permutation test. We ran independent parallel searches on real and randomized neuronal data using an *"Equal Computational Effort"* principle (100 nodes x 72 hours).
+- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet these cells do not fail in a uniform manner. Single-cell RNA sequencing (scRNA-seq) reveals high heterogeneity, but identifying robust, combinatorial gene signatures that define *distinct neuronal failure modes* remains a computational challenge.
+- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) to this problem, modeling neuronal heterogeneity as a collection of distinct rules. To navigate the vast search space, we developed a *Hierarchical Parallel Genetic Algorithm*. The framework deployed 100 GPU nodes, with each node simultaneously executing 10 independent search instances via tensor batching.
+- Rigor :: We strictly enforced an *"Equal Computational Effort"* principle. We performed a massive-scale permutation test where the real dataset and 999 randomized datasets were each subjected to exactly *72 hours* of rapid-cycle evolutionary search (population 55, restarting every 300 generations).
 - Results :: The framework executed a deep search equivalent to ~72,000 hours of sequential computation. It identified a combinatorial gene signature in PD dopaminergic neurons with a fitness score that was statistically unreachable by chance ($p < 0.001$). This signature defines a robust, non-overlapping cell state distinct from general stress responses.
-- Conclusion :: This study demonstrates that DSSD, powered by parallel GPU computing and rigorous statistics, is a powerful paradigm for untangling the heterogeneity of dopaminergic neurodegeneration and generating testable molecular hypotheses.
+- Conclusion :: This study demonstrates that DSSD, powered by parallel GPU computing and rigorous statistics, is a powerful paradigm for untangling the heterogeneity of dopaminergic neurodegeneration.
 
 * Introduction
 ** The Biological Challenge: The "Mixed Bag" of PD Neurons
 - Parkinson's Disease primarily affects dopaminergic neurons in the substantia nigra, but degeneration is asynchronous and heterogeneous.
-- *The Core Hypothesis:* We posit that "non-overlapping subgroups" in scRNA-seq data correspond to *distinct neuronal states* or specific molecular failure modes (e.g., a subgroup defined by mitochondrial collapse vs. one defined by synaptic dysfunction).
-- Standard differential expression averages these signals across the entire population, washing out the specific combinatorial logic of these distinct states.
+- *The Core Hypothesis:* "Non-overlapping subgroups" in scRNA-seq data correspond to *distinct neuronal states* or molecular failure modes (e.g., mitochondrial collapse vs. synaptic dysfunction).
 
 ** The Computational Challenge
 - *The Search Space:* Finding the specific combinations of genes that define these states requires searching an astronomically large solution space ($2^{1000}$ combinations).
@@ -24,35 +23,43 @@
 ** Our Approach: Parallel DSSD on GPUs
 - We present a framework that treats identifying PD cell states as a massive combinatorial optimization problem.
 - *Parallelism as an Enabler:* We combine the population-based search of Genetic Algorithms with the tensor throughput of GPUs to solve the computational bottleneck.
-- *Robust Statistics:* We use this massive power to rigorously falsify discovered neuronal states against null models, ensuring biological relevance.
 
 * Methods
 ** Single-Cell Data Preprocessing
 - *Dataset:* 6,385 dopaminergic neurons from the substantia nigra (Control vs. PD).
-- *Normalization:* =SCTransform= with strict batch regression (=Sample_v2=) to ensure rules reflect biology, not donor variance.
+- *Normalization:* =SCTransform= with strict batch regression (=Sample_v2=).
 - *Input:* The top 1,000 variable genes, binarized to facilitate logical rule generation.
 
 ** The Hierarchical GPU-Accelerated Framework
-To navigate the vast search space of neuronal states, we implemented a two-tier parallel architecture on the DAWN supercomputer.
+We implemented a two-tier parallel architecture on the DAWN supercomputer (Intel PVC Max Series GPUs).
 
-*** Tier 1: Vectorized Intra-Node Parallelism
-- We maximized GPU utility by vectorizing the Genetic Algorithm. Our custom PyTorch kernels evaluate *10 independent populations* simultaneously using 5D tensor broadcasting.
+*** Tier 1: Vectorized Intra-Node Parallelism (The "10x" Kernel)
+- Inside each job, we utilized custom PyTorch kernels to run *10 independent Genetic Algorithm searches simultaneously* on a single GPU.
+- By using =torch.int8= and 5D tensor broadcasting, we evaluated 10 separate populations (Pop=55) in lockstep.
 
-*** Tier 2: Distributed Inter-Node Parallelism
-- We scaled the search across 100 GPU nodes. This massive parallelism allows us to explore the real biological landscape while simultaneously characterizing the "noise landscape" of randomized data.
+*** Tier 2: Distributed Inter-Node Parallelism (The "100x" Array)
+- We scaled the search across *100 GPU nodes* via SLURM.
+- *Task 0:* Processed the Real Data + 9 Randomized Permutations.
+- *Tasks 1-99:* Processed 990 Randomized Permutations.
+- *Total Scale:* 1,000 datasets (1 Real + 999 Null) evaluated concurrently.
 
-** The Time-Bounded Deep Search Protocol
-- *Strategy:* To identify subtle neuronal states, a shallow search is insufficient. We implemented a *Random Restart* strategy that continuously explores new areas of the search space for a fixed wall-clock window.
-- *Protocol:* 100 nodes running for 72 hours, ensuring that the algorithm has ample time to escape local optima and converge on global maxima for both real neuronal data and permuted baselines.
+** The Time-Bounded "Rapid-Cycle" Protocol
+- *Strategy:* Standard GAs often stagnate in local optima. To maximize exploration, we implemented a *Random Restart* strategy.
+- *Micro-Cycle Parameters:*
+  - Population Size: 55
+  - Run Length: 300 Generations (approx. [X] seconds per burst).
+  - Action: At generation 300, the best individual is archived, and the population is fully re-initialized.
+- *Macro-Protocol:* This cycle repeats continuously for a strict *72-hour wall-clock limit*, ensuring deep exploration of the landscape for both real and null models.
 
 ** Statistical Validation
 - *Null Hypothesis:* That the combinatorial rules found in biological neurons are no more fit than patterns found in noise given sufficient search time.
-- *The Test:* We compare the best rule set found in the real PD neurons ($F_{real}$) against the distribution of best rule sets from 999 randomized datasets ($F_{perm}$), all searched with identical effort.
+- *The Test:* We compare the global best fitness found in the real PD neurons ($F_{real}$) against the distribution of global bests from 999 randomized datasets ($F_{perm}$), all searched with identical effort.
 
 * Results
 ** Computational Performance
-- *Efficiency:* By exploiting the parallel nature of GAs and GPUs, we compressed *72,000 hours of effective search effort* into a single 3-day run.
-- *Scalability:* The framework demonstrates that rigorous DSSD is now feasible for large-scale neuronal atlases.
+- *Throughput:* The framework executed *7,200 Physical GPU-hours* in a single 3-day run.
+- *Effective Scale:* Because each node ran 10 searches in parallel, this corresponds to *72,000 hours of effective sequential search time*.
+- *Search Volume:* Across 100 nodes, the system performed millions of generations and thousands of independent restarts, creating a high-confidence "noise floor."
 
 ** Statistical Significance
 - *The Discovery:* The PD signature identified by our framework achieved a fitness score ($F_{real}$) that significantly exceeded the maximum score found in any randomized dataset ($p < 0.001$).
@@ -65,7 +72,6 @@ To navigate the vast search space of neuronal states, we implemented a two-tier 
 * Discussion
 ** DSSD as a Tool for Single-Cell Neuroscience
 - We argue that DSSD is an essential tool for dissecting neurodegeneration. It bridges the gap between the resolution of scRNA-seq and the need for mechanistic understanding.
-- By enforcing diversity, the algorithm naturally disentangles the "mixed bag" of PD pathology into coherent, distinct neuronal states.
 
 ** The Necessity of "Brute-Force" Rigor
 - In high-dimensional spaces, standard p-values break down. Our approach uses massive parallelism to empirically construct the null distribution, setting a new standard for confidence in AI-driven biomedical discovery.
