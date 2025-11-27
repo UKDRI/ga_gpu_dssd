@@ -1,0 +1,38 @@
+--- PARAMETERS (from Task 0) ---
+num_positives: 3027
+num_negatives: 3358
+
+Cover Redundancy (CR) of Rank 1 Set: 0.466620
+GA-Calculated Overlap Ratio (E): 1.010800
+--- Final Permutation Test ---
+Real Data Fitness: 0.06210314
+Total Permuted Runs Found: 999
+Max Permuted Fitness: 0.02939028
+Avg Permuted Fitness: 0.02510886
+Std Dev Permuted Fitness: 0.00131071
+
+Empirical p-value (B+1)/(N+1): (0 + 1) / (999 + 1) = 0.001000
+  (Count of permuted scores >= real score: 0)
+
+--- Top 5 Rule Sets (from REAL data run [Permutation 0]) ---
+--- Rank 1 (Fitness: 0.06210313) ---
+Chromosome Coverage:
+- Covered: 2308 / 6385 total samples
+- Positives: 1495 / 3027 total positives
+- Negatives: 813 / 3358 total negatives
+Fitness Calculation:
+- Subgroup Size Fraction (A): 0.3615 (2308 / 6385)
+- Local Pos Fraction (B):   0.6477 (1495 / 2308)
+- Global Pos Fraction (C):  0.4741 (3027 / 6385)
+- WRAcc Quality (D = A*(B-C)): 0.06277583
+- Overlap Ratio (E):          1.0108
+- Final Fitness (D / E):      0.06210313
+Rules:
+- Rule 1: NCOR2=0 AND FAM19A5=0 AND BRSK2=0 AND MT-ND4L=1 AND BIN1=0 AND SEMA4D=0 AND FAM102A=0 AND ZFYVE16=0 AND ST3GAL4=0 AND ATP6V1D=0 AND DSTN=0 AND CHST3=0 AND PALD1=0 AND COX4I1=0 AND FNTA=0
+(Covers: 179 total | 138 Pos | 41 Neg)
+- Rule 2: FTH1=1 AND RBX1=0 AND PALD1=0 AND SLTM=0 AND TMEM219=0
+(Covers: 518 total | 376 Pos | 142 Neg)
+- Rule 3: RPL21=1 AND PDE2A=0 AND AGAP3=0 AND WNT7B=0 AND SELENOT=0 AND TMEM201=1 AND MUC3A=0 AND DAD1=1 AND RET=1 AND PPT1=0 AND SPART=0 AND SLIRP=1 AND VAPA=0 AND RHPN1=0 AND YWHAB=0 AND PCDH17=0 AND RPS12=0
+(Covers: 1 total | 1 Pos | 0 Neg)
+- Rule 4: PALD1=1
+(Covers: 1635 total | 1003 Pos | 632 Neg)
