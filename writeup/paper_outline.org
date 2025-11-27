@@ -54,7 +54,13 @@ While the GA generates fully interpretable rule definitions (e.g., PALD1=1), und
 #+ATTR_LATEX: :width 0.8\textwidth :placement [H]
 [[../18nov_prod_36hours/fitness_histogram.png]]
 ** Biological Discovery: A Triple Dissociation of Failure Modes
-The GA identified three robust, non-overlapping subgroups representing distinct cellular states.
+The GA identified three robust, non-overlapping subgroups representing
+distinct cellular states.
+
+#+CAPTION: Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules, relative to the total global population. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup. The explicit cell counts are annotated on each bar.
+#+NAME: fig:subgroup_composition
+#+ATTR_LATEX: :width 0.9\textwidth :placement [H]
+[[../18nov_prod_36hours/subgroup_analysis.png]]
 
 *** 1. The Metabolic Compensation State (Rule 1)
 - *Definition:* =NCOR2=0 AND FAM19A5=0 AND MT-ND4L=1...=
