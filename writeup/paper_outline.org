@@ -156,7 +156,16 @@ The chronological stratification of these states informs the *timing* of interve
 - **Neuroprotective Agents (Mitochondrial/Iron):** Therapies targeting mitochondrial function or iron chelation must be administered in the **early disease phase**, targeting the Rule 1 and Rule 2 populations while they are still transcriptionally distinct and functional.
 - **Senolytics (Anti-Fibrotic):** Once neurons enter the **Rule 4 (Fibrotic)** state, metabolic rescue may be futile. Instead, this population may require "Senolytic" therapies (like anti-LINGO1) to clear dysfunctional cells or halt the fibrotic remodeling of the nigral microenvironment.
 
+* Conclusion
+** Bridging High-Performance Computing and Mechanobiology
+This study demonstrates that the complexity of neurodegeneration cannot be fully resolved by standard clustering or greedy rule induction. By leveraging the massive parallelism of modern GPUs, we transformed Subgroup Discovery from a limited patient-stratification tool into a high-throughput engine for **Cell State Discovery**. The DSSD framework successfully navigated a combinatorial search space of $2^{1000}$ hypotheses to identify signals that were statistically invisible to random chance ($p < 0.001$) and orthogonal to standard transcriptomic clusters.
+
+** A Unified Model of Dopaminergic Failure
+Our analysis resolves the long-standing "mixed bag" problem of Parkinson's Disease heterogeneity. We propose that dopaminergic neurons do not degenerate along a single linear path, but rather segregate into distinct **Attractor States** of failure:
+1.  **Early Adaptation:** Neurons initially engage homeostatic mechanisms, either upregulating mitochondrial respiration (Rule 1) or sequestering toxic iron (Rule 2).
+2.  **Terminal Collapse:** Upon the failure of these defenses, neurons transition into a distinct, irreversible state of fibrotic senescence (Rule 4).
+
+** Implications for Precision Medicine
+These findings challenge the "one-size-fits-all" paradigm of neuroprotection. A therapeutic agent targeting mitochondrial function may rescue the **Rule 1** population but fail to address the protein aggregation driving the **Rule 2** state, or the fibrotic remodeling of the **Rule 4** state. By mapping individual cells to these specific failure modes, DSSD provides the necessary resolution to design state-specific interventions, moving the field closer to a true precision medicine approach for neurodegeneration.
 
 
-** Conclusion
-We have demonstrated that GPU-accelerated Parallel Genetic Algorithms can transform Subgroup Discovery from a theoretical exercise into a rigorous biological tool. By robustly identifying distinct cell states hidden within complex PD data, this framework provides a clear map of the heterogeneous landscape of neurodegeneration.
