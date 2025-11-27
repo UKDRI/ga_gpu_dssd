@@ -86,7 +86,7 @@ distinct cellular states.
 #+ATTR_LATEX: :width 0.7\textwidth :placement [H]
 [[./images/mechanism_heatmap.png]]
 
-#+CAPTION: Gene Ontology (GO) and Disease Ontology validation. Over-Representation Analysis confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological processes. Rule 1 maps to Mitochondrial Complex I assembly ($p < 10^{-20}$), Rule 2 to Iron stress and cytoplasmic translation ($p < 0.001$), and Rule 4 to Extracellular Matrix Organization ($p < 10^{-8}$). Bars represent the negative log p-value (higher is more significant).
+#+CAPTION: Figure 4: Pathway and Ontology Validation. Over-Representation Analysis (ORA) confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological mechanisms. (Top) The Rule 1 subgroup is defined by mitochondrial dysfunction, showing extreme enrichment for "Leber hereditary optic neuropathy" ($p < 10^{-28}$) and "Mitochondrial myopathy." (Middle) The Rule 2 subgroup exhibits a signature of "Cytoplasmic Translation" ($p < 10^{-3}$) and "Cation Channel Activity," consistent with the cellular machinery required for ferritin-mediated iron sequestration. (Bottom) The Rule 4 subgroup is characterized by "Regulation of Small GTPase Mediated Signal Transduction" ($p < 0.01$), a key driver of cytoskeletal remodeling and fibrosis. Bars represent the negative log p-value (higher is more significant). The dashed line indicates the significance threshold ($p=0.05$).
 #+NAME: fig:pathway_validation
 #+ATTR_LATEX: :width 0.65\textwidth :placement [H]
 [[./images/pathway_validation_figure.png]]
