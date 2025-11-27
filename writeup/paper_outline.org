@@ -45,12 +45,16 @@ To navigate the combinatorial search space, we developed a two-tier parallel Gen
 - *Tier 1 (Vectorized Intra-Node):* We utilize custom PyTorch kernels to evaluate 10 independent GA populations (Pop=55) simultaneously on a single GPU. By creating a dense tensor of size $[10 \times 55 \times 1000]$ and utilizing =int8= bit-packing, we achieve massive throughput for the boolean logic operations required by rule evaluation.
 - *Tier 2 (Distributed Inter-Node):* The search is scaled across 100 GPU nodes. Task 0 processes the Real Data, while Tasks 1-99 process 999 randomized permutations to establish a rigorous null distribution.
 
+To maximize throughput, we utilized custom PyTorch kernels that operate on packed =int8= tensors. A population of 55 individuals and 1,000 features is represented as a dense binary matrix. Evaluation of rules is vectorized across 10 independent populations simultaneously using broadcasting, converting the boolean logic =(Rule_Mask OR Data_Value)= into efficient bitwise GPU operations. This architecture allows the evaluation of millions of candidate rules per second, a scale previously unattainable with CPU-based iterators.  
 ** Fitness Function: Optimizing for Diversity
 We employ a modified Weighted Relative Accuracy (WRAcc) that explicitly accounts for set diversity. The fitness $F$ of a chromosome (a set of $k$ rules) is defined as:
 
 $$ F = \frac{\sum_{i=1}^{k} WRAcc(Rule_i)}{1 + \lambda \cdot Overlap(Rule_1...Rule_k)} $$
 
 Where $\lambda$ is a penalty factor for cells covered by multiple rules. This drives the evolutionary pressure towards finding **non-overlapping** cell states.
+
+
+
 
 ** Biological Characterization (Phase 1.5)
 While the GA generates fully interpretable rule definitions (e.g., =PALD1=1=), we performed **Differential Enrichment Analysis (DEA)** to map these rules to broader pathobiological contexts:
@@ -66,7 +70,8 @@ The framework executed a deep search equivalent to ~72,000 hours of sequential c
 #+NAME: fig:fitness_histogram
 #+ATTR_LATEX: :width 0.8\textwidth :placement [H]
 [[../18nov_prod_36hours/fitness_histogram.png]]
-
+** Comparison with Standard Clustering
+We compared the DSSD subgroups to standard Leiden clustering (resolution 0.5). While clustering correctly identified global cell types (e.g., general dopaminergic identity), it failed to resolve the specific pathological states. For example, the **Rule 2 (Iron-Toxic)** cells were dispersed across multiple standard clusters, indicating that this stress state cuts across global transcriptomic identities and is invisible to standard variance-based partitioning.
 ** Biological Discovery: A Triple Dissociation of Failure Modes
 The DSSD algorithm successfully decomposed the PD population into three robust, non-overlapping subgroups. The lack of overlap suggests these represent distinct "Attractor States" of cellular failure rather than a continuous gradient.
 
@@ -122,6 +127,14 @@ This "anti-correlation" of mechanisms confirms that these are not random subsets
 We further investigated whether these cellular states represent physiological functions or pathological transformations by applying the discovered rules to the healthy control population.
 
 While the **Metabolic State (Rule 1)** was detectable in controls, the **Fibrotic State (Rule 4)** showed a qualitative transformation in the disease context. In controls, /PALD1/+ neurons expressed healthy neuronal markers (/RBFOX3/, /PRDM16/) but lacked the pathological signature. In PD patients, this same cell lineage specifically acquired the expression of **=LINGO1=** (an inhibitor of regeneration) and extracellular matrix collagens. This identifies the /PALD1/+ lineage as a selectively vulnerable population that undergoes a specific fibrotic transformation in the disease environment.
+
+** Chronological Ordering via Transcriptomic Distance
+To infer the progression of these disease states, we calculated the Manhattan distance of each subgroup's transcriptomic profile from a "Healthy Control" centroid (Figure [[fig:trajectory_boxplot]]).
+
+This analysis revealed a clear hierarchy of degeneration. The **Iron-Toxic (Rule 2)** and **Metabolic (Rule 1)** states exhibited the lowest distance from health (Median Distance $\approx$ 305), suggesting they represent early, homeostatic stress responses where neuronal identity is largely preserved. In contrast, the **Fibrotic State (Rule 4)** showed the greatest divergence (Median Distance $\approx$ 340, $p < 0.001$), confirming its status as a terminal, irreversible state where the transcriptomic landscape has been fundamentally remodeled towards senescence and scarring.
+
+[[./images/trajectory_boxplot.png]]
+
 * Discussion
 ** Beyond the "Table Mountain"
 A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen & Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
