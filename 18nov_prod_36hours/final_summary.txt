@@ -1,9 +1,6 @@
 --- PARAMETERS (from Task 0) ---
 num_positives: 3027
 num_negatives: 3358
-
-Cover Redundancy (CR) of Rank 1 Set: 0.466620
-GA-Calculated Overlap Ratio (E): 1.010800
 --- Final Permutation Test ---
 Real Data Fitness: 0.06210314
 Total Permuted Runs Found: 999
