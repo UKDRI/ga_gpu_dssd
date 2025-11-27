@@ -6,11 +6,13 @@
 #SBATCH --gres=gpu:1
 #SBATCH -A AIRR-P13-DAWN-GPU
 
-# --- 10 HOUR / 100 JOB PRODUCTION RUN ---
-# (Run 100 jobs for 10 hours 15 min each)
+
+# --- 36 HOUR / 100 JOB PRODUCTION RUN ---
 #SBATCH --array=0-99
-#SBATCH --time=10:15:00
-export JOB_TIME_MINS=615 # 10 hours * 60 + 15 min safety
+#SBATCH --time=35:30:00
+export JOB_TIME_MINS=2130   # 35.5 hours, if your GA uses this
+
+
 
 
 # --- Get Output Directory from submit_ga.sh ---
