@@ -36,9 +36,14 @@ DSSD treats the identification of cell states as a **Set Optimization Problem**.
 
 
 * Methods
+
 ** Single-Cell Data Preprocessing
-- *Dataset:* 6,385 dopaminergic neurons (Control vs. PD).
-- *Input:* Top 1,000 variable genes, binarized to facilitate logical rule generation.
+To ensure that the discovered rules represented biological signals rather than technical artifacts or batch effects, we implemented a rigorous preprocessing pipeline using the Seurat R toolkit.
+
+- **Dataset Filtering:** We analyzed a cohort of 6,385 nuclei, strictly filtering for dopaminergic neurons (DaNs) from Control (CTR) and Parkinson's Disease (PD) donors. Rare or ambiguous subtypes (e.g., ILBD) were excluded to sharpen the case-control contrast.
+- **Normalization and Confounder Regression:** We utilized **=SCTransform=**, a regularized negative binomial regression method, to normalize gene expression. Crucially, we included the donor identifier (=Sample_v2=) as a regression variable. This effectively "regressed out" inter-individual variability and batch effects, ensuring that the residual expression values reflected disease-associated states rather than donor-specific idiosyncrasies.
+- **Feature Selection:** We performed a preliminary differential expression screen (Wilcoxon Rank Sum test) to identify the top 1,000 variable genes most associated with the disease axis ($p_{adj} < 10^{-50}$).
+- **Binarization:** To facilitate logical rule generation, the scaled residuals from =SCTransform= (z-scores) were binarized. A gene was considered "Expressed" (=1=) if its standardized expression value was $>0$ (above the population mean) and "Not Expressed" (=0=) otherwise. This binarization strategy preserves the relative "High/Low" state of gene expression while enabling efficient boolean logic operations on the GPU.  
 
 ** The Hierarchical GPU-Accelerated Framework
 To navigate the combinatorial search space, we developed a two-tier parallel Genetic Algorithm (GA) optimized for Intel PVC GPUs.
