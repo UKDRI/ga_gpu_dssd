@@ -1,3 +1,4 @@
+#+HTML_HEAD: <style> img { max-width: 600px; height: auto; display: block; margin-left: auto; margin-right: auto; } </style>
 #+TITLE: Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework Identifies Distinct Metabolic, Fibrotic, and Iron-Toxic States in Parkinson’s Disease
 #+AUTHOR: Sam Neaves
 #+DATE: <2025-11-28>
@@ -144,11 +145,11 @@ This analysis revealed a clear hierarchy of degeneration. The **Iron-Toxic (Rule
 #+ATTR_LATEX: :width 0.9\textwidth :placement [H]
 [[./images/trajectory_boxplot.png]]
 
-
-#+CAPTION: The Rule 2 "Iron-Toxic" phenotype is orthogonal to global transcriptomic clusters. (Left) UMAP projection of all cells, with Rule 2 cells colored in red. The lack of a distinct spatial island confirms that this state does not correspond to a single cell type identity. (Right) Prevalence of the Iron-Toxic state across standard Seurat clusters. While some clusters (e.g., 0, 4) show higher susceptibility, the phenotype is distributed across the entire dopaminergic population, indicating a pan-lineage stress response.
+#+CAPTION: The "Iron-Toxic" State represents a functional overlay rather than a transcriptomic identity. (A) UMAP projection of all cells, with Rule 2 cells colored in red. The distribution of these cells across the manifold confirms that Iron Toxicity is not restricted to a single dopaminergic sub-lineage, but rather represents a distinct **stress state** that can be acquired by various neuronal subtypes. (B) Prevalence of the Iron-Toxic state across standard Seurat clusters. While the state is ubiquitous, its prevalence is heterogeneous, with specific clusters (e.g., 0, 4) showing heightened susceptibility. This confirms that DSSD identifies a coherent pathological mechanism that cuts across, rather than aligns with, standard variance-based clustering.
 #+NAME: fig:rule2_orthogonal
 #+ATTR_LATEX: :width 1.0\textwidth :placement [H]
 [[./images/rule2_combined_labeled.png]]
+
 
 * Discussion
 ** Beyond the "Table Mountain"
