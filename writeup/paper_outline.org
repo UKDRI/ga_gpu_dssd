@@ -14,14 +14,14 @@
 ** The Biological Challenge: The "Mixed Bag" of Neurodegeneration
 Parkinson's Disease (PD) degeneration is asynchronous. At any given moment, the substantia nigra contains a mixture of healthy, compensating, and dying cells. Standard analysis pipelines typically rely on clustering (e.g., Louvain/Leiden), which forces cells into mutually exclusive groups based on global transcriptomic similarity. However, biological processes are often continuous or overlapping; a cell may possess a specific "Dopaminergic Identity" while simultaneously undergoing a specific "Metabolic Stress" state.
 
-We posit that **Subgroup Discovery (SD)** is uniquely suited to solve this problem. Unlike clustering, SD identifies local patterns: logic rules that describe a specific subset of interest without forcing a global partition of the data.
+** The Computational Innovation: From Patient Stratification to Cellular States
+Subgroup Discovery (SD) has a rich history in bioinformatics. In the microarray era, seminal works by **Gamberger et al. (2004)** and **Lavrač et al. (2004)** demonstrated that SD could find interpretable rules to stratify patients (e.g., /"Patients with high Gene X and low Gene Y have Leukemia Type A"/).
 
-** The Computational Innovation: From Greedy Search to DSSD
-Historical applications of Subgroup Discovery in transcriptomics (e.g., Lavrač et al., 2004; Pieters et al., 2010) typically focused on microarray data, where "instances" were patients. The goal was patient stratification. In the single-cell era, we treat **cells as instances**, allowing us to map the landscape of cellular states.
+However, these early applications were limited by sample size ($N < 100$ patients) and focused on **classification** (Diagnosis). We repurpose this framework for the single-cell era, where $N$ is measured in thousands of cells. By treating individual cells as instances, we shift the focus from *Patient Stratification* to **Cell State Discovery**. We posit that non-overlapping subgroups in scRNA-seq data represent distinct, stable "attractor states" of cellular failure (e.g., Metabolic vs. Fibrotic) that co-exist within the same patient.
 
-However, applying SD to high-dimensional single-cell data presents a massive search space ($2^{1000}$ combinations). Standard "Top-$k$" algorithms are greedy: they tend to return highly redundant variations of the single strongest signal—a phenomenon known as the **"Table Mountain" effect** (van Leeuwen & Knobbe, 2012).
+** Why DSSD? Optimizing Sets over Singletons
+Applying SD to high-dimensional single-cell data creates a search space of $2^{1000}$ combinations. Standard "Top-$k$" algorithms are greedy: they return redundant variations of the single strongest signal (the "Table Mountain" effect). We implement **Diverse Subgroup Set Discovery (DSSD)** to optimize a *set* of rules simultaneously, penalizing overlap to force the discovery of orthogonal biological mechanisms.
 
-To overcome this, we implement **Diverse Subgroup Set Discovery (DSSD)**. Instead of optimizing individual rules, we optimize a *set* of rules simultaneously. By penalizing overlap between rules in the fitness function, we force the algorithm to ignore redundant variations and discover distinct, orthogonal biological mechanisms.
 
 * Methods
 ** Single-Cell Data Preprocessing
