@@ -1,166 +1,125 @@
-#+title: GPU-Accelerated DSSD and EMM for Single-Cell Analysis
+#+title: GPU-Accelerated DSSD and Biological Validation Pipeline
 #+author: Sam Neaves
-#+date: <2025-11-16>
+#+date: <2025-11-28>
 #+options: toc:2 num:nil
 #+property: header-args :eval never-export
 
-Project Goal
+* Project Goal
 
-This project implements a multi-phase computational pipeline to identify and characterize disease-associated cellular states from high-dimensional single-cell RNA-seq data.
+This project implements a high-performance computational pipeline to identify and characterize heterogeneity in Parkinson's Disease (PD) using single-cell RNA-seq data.
 
-Phase 1 (Subgroup Discovery): Uses a custom-built, GPU-accelerated Genetic Algorithm (GA) to discover statistically significant, diverse subgroup sets (DSSD). These are interpretable rule sets (e.g., =Gene A=1 AND Gene B=0=) that are strongly associated with the Parkinson's disease (PD) phenotype.
+The pipeline operates in three phases:
+1.  **Discovery (GPU):** Uses a custom parallel Genetic Algorithm (GA) to discover "Diverse Subgroup Sets"—combinatorial rules that define distinct cell states.
+2.  **Characterization (CPU):** Performs Differential Enrichment Analysis to determine the biological context (e.g., fibrosis, metabolic stress) of the discovered states.
+3.  **Validation (GPU/CPU):** Uses "Shadow Runs" (blinded re-discovery) and external Pathway Analysis (GO/Enrichr) to prove robustness and biological relevance.
 
-Phase 2 (Exceptional Model Mining): Uses the DSSD program within an Apptainer container to identify regulatory networks. It searches for "description" genes that predict the expression of the biomarker set found in Phase 1, and contrasts these networks between PD and Control cells.
-
-The analysis runs on the DAWN HPC, utilizing its Intel PVC GPUs for Phase 1 and its CPU nodes for Phase 2.
-
-Phase 1: Genetic Algorithm (Subgroup Discovery)
+* Phase 1: Genetic Algorithm (Subgroup Discovery)
 
 ** Statistical Method: Time-Limited Random-Restart Permutation Test
 
-To find the best possible solution and ensure its statistical significance, we employ a "random-restart" (or "best-of-N-restarts") strategy. This addresses the "Winner's Curse" and the risk of the GA converging on a poor local optimum.
+To find the best possible solution and ensure its statistical significance, we employ a "random-restart" strategy combined with a massive permutation test.
 
-The Array Job: The simple_ga.sh script launches a SLURM job array of 100 tasks (Task 0 for real data, Tasks 1-99 for permuted data).
-
-The Time Budget: Each of these 100 tasks is given a large time budget (e.g., 10 hours).
-
-The "Random-Restart" Loop: Inside the 10-hour window, the simple_ga_array.py script runs a while(time.time()...) loop. This loop performs many (e.g., 150-200) independent, 300-generation GA "restarts."
-
-Finding the "Champion": Each 10-hour job tracks the single best solution ("champion") it finds across all its restarts.
-
-The Final p-value: The gather_results.py script compares the "champion of the real data" (from Task 0) to the "distribution of champions from the 99 permuted jobs" (from Tasks 1-99).
-
-To further mitigate the "Winner's Curse," Task 0 tracks the Top 5 distinct, high-quality solutions it finds across all its restarts, presenting a more diverse set of final candidates.
+-   **The Array Job:** The =simple_ga.sh= script launches a SLURM job array of 100 tasks (Task 0 for real data, Tasks 1-99 for permuted data).
+-   **The Time Budget:** Each task runs for a fixed wall-clock time (e.g., 36 hours for deep search, 10 hours for validation).
+-   **The "Random-Restart" Loop:** Inside the time window, the GA performs hundreds of independent restarts to explore the landscape globally.
+-   **The Final p-value:** We compare the fitness of the "Champion" rule set found in the real data against the distribution of champions found in the 99 null (permuted) datasets.
 
 ** Key GA Parameters
 
-=population_size = 55=: The maximum population size that can fit within the ~128GB of VRAM on a single PVC GPU, given our highly parallelized tensor operations.
+-   =population_size = 55=: Optimized to fit within the ~128GB VRAM of Intel PVC GPUs using =int8= tensor operations.
+-   =num_generations = 300=: Depth of a single local search.
+-   =JOB_TIME_MINS=: The "breadth" of the search (total duration).
 
-=num_generations = 300=: The "depth" of a single GA run. This is optimized for fast local convergence.
+* Phase 2: Biological Characterization (Phase 1.5)
 
-=JOB_TIME_MINS= (in =run_ga_array.slurm=): The "breadth" of the search. A 10-hour (615 min) budget allows for hundreds of restarts, ensuring robust global exploration.
+Instead of traditional "black box" rule extraction, this phase determines the *mechanism* of the discovered subgroups.
 
-** GA File Descriptions
+** Differential Enrichment Analysis
 
-File
+We define a "Subgroup" based on the GA rule (e.g., =PALD1=1=) and compare it against the background population to find co-expressed genes.
 
-Description
+-   **Internal Validation (PD vs PD):** Compares Subgroup cells to other PD cells. This identifies the specific "Failure Mode" (e.g., why is *this* PD cell different from *that* PD cell?).
+-   **External Validation (CTRL vs CTRL):** Checks if the subgroup exists in healthy controls and whether it exhibits the same pathological markers (e.g., LINGO1/Fibrosis).
 
-=simple_ga.sh=
+** Pathway Validation (ORA)
 
-Main submission script. Launches the GA array and the dependent gather job.
+We use =gseapy= to map the differentially enriched gene lists to the **Gene Ontology (GO)** and **Jensen DISEASES** databases. This provides objective, literature-backed confirmation of the biological state (e.g., "Mitochondrial Myopathy", "Extracellular Matrix Organization").
 
-=run_ga_array.slurm=
+* Phase 3: The "Shadow Run" Validation
 
-SLURM script for the main GA array job. Sets up the pytorch-gpu environment and passes the time limit.
+To test for biological redundancy and "Table Mountain" landscapes, we perform a **Shadow Run**.
 
-=simple_ga_array.py=
+1.  **Blinding:** We remove all genes associated with the primary discovery (e.g., PALD1, FTH1, NCOR2) from the dataset.
+2.  **Re-Discovery:** We re-submit the GPU GA on this "scorched earth" dataset.
+3.  **Inference:**
+    -   If the GA fails to find a signal -> The primary discovery is unique.
+    -   If the GA finds a new signal -> We have identified a secondary, redundant disease mechanism hidden by the primary signal.
 
-Core Python GA worker. Runs the time-limited while loop of many restarts.
+* File Descriptions
 
-=ga_utils.py=
+** Core GA Files (GPU)
 
-Shared Python functions for CPU-based rule decoding and stats calculation.
+| File | Description |
+| :--- | :--- |
+| =simple_ga.sh= | Main wrapper. Launches the array and automatically submits the gather job. |
+| =run_ga_array.slurm= | SLURM script for the main 100-job array. Sets up the =pytorch-gpu= environment. |
+| =simple_ga_array.py= | Core Python GA worker. Runs the time-limited restart loop. |
+| =ga_utils.py= | Shared utility functions for rule decoding and stats. |
+| =run_gather.slurm= | Post-processing job. Collects results and calculates p-values. |
+| =gather_results.py= | Analyzes raw results, generates Histograms and Subgroup Plots. |
 
-=run_gather.slurm=
+** Analysis & Validation Files (CPU)
 
-SLURM script for the post-processing 'gather' job. Runs after the array finishes.
+| File | Description |
+| :--- | :--- |
+| =analyze_subgroups_full.py= | Performs Differential Enrichment Analysis for both PD and Control populations. Generates CSVs of co-expressed genes. |
+| =validate_biology.py= | Uses =gseapy= to query Gene Ontology databases for the gene lists found above. |
+| =replot.py= | Utility to generate polished publication-quality figures from text summaries. |
 
-=gather_results.py=
+** Shadow Run Files (Validation)
 
-Analyzes all ga_results_*.txt files. Computes p-value, Cover Redundancy, and generates plots.
+| File | Description |
+| :--- | :--- |
+| =shadow_ga.py= | Modified GA script that points to the =sc_data_blinded= directory. |
+| =run_shadow.slurm= | SLURM script for the validation run (typically 100 jobs, 10 hours). |
 
-=sc_data/=
+* How to Run the Full Pipeline
 
-Directory containing input data (=X_binary.csv=, =y_labels.csv=).
+** Step 1: Run the Phase 1 GA (Discovery)
 
-Phase 2: Exceptional Model Mining (EMM)
-
-This phase uses the original DSSD program (running in wine inside an apptainer container) to perform EMM. It identifies "description" genes (potential regulators) that best predict the expression pattern of the biomarker set discovered in Phase 1. This analysis is run separately on the PD and Control cell populations to find "disease-specific network rewiring."
-
-** EMM File Descriptions
-
-File
-
-Description
-
-=wine-test-dssd.sif=
-
-The apptainer container image containing the dssd.exe binaries.
-
-=prepare_emm_data.py=
-
-Python script to prepare data for DSSD. Splits X_binary.csv into PD/Ctrl groups and creates the required .arff and .emm files.
-
-=dssd_pd.conf=
-
-Config file for the DSSD run on PD patients. Sets measure = WKL.
-
-=dssd_ctrl.conf=
-
-Config file for the DSSD run on Control patients.
-
-=run_emm.slurm=
-
-SLURM script to launch the apptainer job on a pvc9 node. It runs the EMM analysis for both PD and Ctrl groups.
-
-How to Run the Full Pipeline
-
-** Step 1: Run the Phase 1 GA (Biomarker Discovery)
-
-Set parameters in =run_ga_array.slurm= (e.g., --array=0-99, --time=10:15:00).
-
-Make scripts executable:
 #+begin_src bash
-chmod +x simple_ga.sh
-chmod +x run_ga_array.slurm
-chmod +x run_gather.slurm
+# Launch the 36-hour production run (100 jobs)
+./simple_ga.sh ./results_prod_run --time=36:00:00
 #+end_src
 
-Launch the automated workflow. This single command will run the 100-job array and automatically run the gather script when it's done.
+*Output:* =final_summary.txt= (Rules), =fitness_histogram.png= (Stats).
+
+** Step 2: Characterize the Biology (Phase 1.5)
+
+Run this on the login node or locally (CPU only). It requires =sc_data/X_binary.csv=.
+
 #+begin_src bash
-./simple_ga.sh ./11nov_prod_10hr_100jobs
+# 1. Generate Enrichment Tables (PD and CTRL comparison)
+python3 analyze_subgroups_full.py
+
+# 2. Validate against Gene Ontology
+python3 validate_biology.py
 #+end_src
 
-When complete, check the results in the output directory:
-#+begin_src bash
-ls ./11nov_prod_10hr_100jobs/
+*Output:* =enrichment_*.csv= and =pathway_validation_*.csv=.
 
-final_summary.txt  fitness_histogram.png  subgroup_analysis.png ...
+** Step 3: Run the Shadow Validation
 
+First, create the blinded dataset (removing top hits):
+
+#+begin_src python
+# (Run snippet to drop columns PALD1, FTH1, etc. and save to sc_data_blinded/)
 #+end_src
 
-** Step 2: Run the Phase 2 EMM (Regulatory Network Discovery)
+Then submit the Shadow Run:
 
-First, prepare the data. Use the --k argument to select a random subset of description genes (e.g., 900) for the test.
 #+begin_src bash
-
-(Load the conda env first)
-
-module purge
-module load default-dawn
-module load intelpython-conda
-conda activate pytorch-gpu
-
-Run the prep script
-
-python3 prepare_emm_data.py --k 900
+sbatch run_shadow.slurm
 #+end_src
 
-Make the EMM run script executable:
-#+begin_src bash
-chmod +x run_emm.slurm
-#+end_src
-
-Submit the EMM job to SLURM.
-#+begin_src bash
-sbatch run_emm.slurm
-#+end_src
-
-Check the results. DSSD will create its own output folders inside emm_results/.
-#+begin_src bash
-ls ./emm_results/
-
-pd_run-1762972624/  ctrl_run-1762972625/ ...
-
-#+end_src
+*Output:* A new set of results in =shadow_results/= proving the existence (or absence) of secondary mechanisms.
