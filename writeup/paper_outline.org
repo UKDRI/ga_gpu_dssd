@@ -86,6 +86,11 @@ distinct cellular states.
 #+ATTR_LATEX: :width 0.7\textwidth :placement [H]
 [[./images/mechanism_heatmap.png]]
 
+#+CAPTION: Gene Ontology (GO) and Disease Ontology validation. Over-Representation Analysis confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological processes. Rule 1 maps to Mitochondrial Complex I assembly ($p < 10^{-20}$), Rule 2 to Iron stress and cytoplasmic translation ($p < 0.001$), and Rule 4 to Extracellular Matrix Organization ($p < 10^{-8}$). Bars represent the negative log p-value (higher is more significant).
+#+NAME: fig:pathway_validation
+#+ATTR_LATEX: :width 0.85\textwidth :placement [H]
+[[./images/pathway_validation_figure.png]]
+
 * Discussion
 ** Deconstructing the "Mixed Bag"
 Standard analysis pools these cells together. Our results demonstrate that "PD Neurons" are not a monolith. At any given time, a neuron might be fighting a Metabolic battle (Rule 1), suffering Iron Toxicity (Rule 2), or surrendering to Senescence/Fibrosis (Rule 4).
