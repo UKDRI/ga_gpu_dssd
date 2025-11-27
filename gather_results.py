@@ -48,70 +48,111 @@ def plot_fitness_histogram(real_fitness, all_perm_fitnesses, output_path):
         print(f"Error saving fitness histogram: {e}")
     plt.close()
 
-def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
+import textwrap # Make sure to add this import at the top of your file if missing!
+
+def plot_subgroup_analysis(task_0_rules, task_0_params, output_path, min_coverage=10):
     """
-    Generates a back-to-back horizontal bar chart for the Rank 1 rules,
-    plus the global distribution.
+    Generates a back-to-back horizontal bar chart.
+    - Filters out tiny subgroups (noise).
+    - Wraps long rule text.
+    - Adds number labels to bars.
     """
     if not task_0_rules or 'num_positives' not in task_0_params or 'num_negatives' not in task_0_params:
-        print("Cannot generate subgroup plot: missing Task 0 rule data or global positive/negative counts.")
-        if not task_0_rules:
-            print("  Reason: task_0_rules list is empty.")
-        if 'num_positives' not in task_0_params:
-            print("  Reason: 'num_positives' not found in task_0_params.")
-        if 'num_negatives' not in task_0_params:
-             print("  Reason: 'num_negatives' not found in task_0_params.")
+        print("Cannot generate subgroup plot: missing data.")
         return
 
     labels = []
     pos_counts = [] # PD (Yellow)
     neg_counts = [] # CTR (Blue)
-
-    # 1. Add Global Distribution
-    labels.append('Global Distribution')
+    
+    # --- 1. Global Distribution ---
+    labels.append('Global Population')
     pos_counts.append(task_0_params.get('num_positives', 0))
     neg_counts.append(task_0_params.get('num_negatives', 0))
 
-    # 2. Add Individual Rules from Rank 1
-    # --- ADDED: Filter for 0-cover rules ---
-    for i, rule in enumerate(task_0_rules):
-        if (rule['n_pos'] + rule['n_neg']) > 0:
-            # Truncate long rule strings for the label
-            rule_str_short = rule['rule_str']
-            if len(rule_str_short) > 70:
-                rule_str_short = rule_str_short[:70] + "..."
+    # --- 2. Filter and Format Rules ---
+    filtered_rules = []
+    for rule in task_0_rules:
+        total_coverage = rule['n_pos'] + rule['n_neg']
+        
+        # FILTER: Skip rules that cover fewer than 'min_coverage' cells
+        if total_coverage < min_coverage:
+            print(f"Skipping Rule {rule['rule_num']} (Coverage {total_coverage} < {min_coverage})")
+            continue
             
-            labels.append(f"Rank 1, Rule {rule['rule_num']}: {rule_str_short}")
-            pos_counts.append(rule['n_pos'])
-            neg_counts.append(rule['n_neg'])
+        filtered_rules.append(rule)
 
+    if not filtered_rules:
+        print("No rules met the minimum coverage threshold for plotting.")
+        # We proceed to plot just the global distribution so the code doesn't crash
+
+    for i, rule in enumerate(filtered_rules):
+        # Format the label:
+        # 1. Replace ' AND ' with ' & ' to save space
+        short_rule = rule['rule_str'].replace(" AND ", " & ")
+        
+        # 2. Smart wrap: split into multiple lines if longer than 60 chars
+        # indent subsequent lines slightly for readability
+        wrapper = textwrap.TextWrapper(width=60, subsequent_indent="  ")
+        wrapped_text = "\n".join(wrapper.wrap(short_rule))
+        
+        label_str = f"Rule {rule['rule_num']}:\n{wrapped_text}"
+        labels.append(label_str)
+        
+        pos_counts.append(rule['n_pos'])
+        neg_counts.append(rule['n_neg'])
+
+    # --- 3. Plotting ---
     # We plot positives as negative values to go left
     pos_counts_negative = [-p for p in pos_counts]
     
     y_pos = np.arange(len(labels))
     
-    plt.figure(figsize=(12, 8 + len(labels) * 0.5)) # Make plot taller for more rules
+    # Increase figure height dynamically based on how many rules we have
+    # (Rules with wrapped text take more vertical space)
+    fig_height = 4 + len(labels) * 1.5 
+    plt.figure(figsize=(14, fig_height)) 
     
     # Plot Blue (CTR / Negatives) bars going right
-    plt.barh(y_pos, neg_counts, align='center', color='steelblue', label='CTR (Negatives)')
+    bars_neg = plt.barh(y_pos, neg_counts, align='center', color='#4e79a7', label='CTR (Control)')
     # Plot Yellow (PD / Positives) bars going left
-    plt.barh(y_pos, pos_counts_negative, align='center', color='goldenrod', label='PD (Positives)')
+    bars_pos = plt.barh(y_pos, pos_counts_negative, align='center', color='#f28e2b', label='PD (Parkinson\'s)')
     
-    plt.yticks(y_pos, labels)
-    plt.gca().invert_yaxis()  # Display Global at top, then Rank 1, Rule 1, etc.
+    plt.yticks(y_pos, labels, fontsize=11)
+    plt.gca().invert_yaxis()  # Global at top
     
-    plt.xlabel('Count of Instances', fontsize=12)
-    plt.title('Back-to-Back Class Distribution (Top Subgroups + Global)', fontsize=16)
+    plt.xlabel('Count of Cells', fontsize=12)
+    plt.title(f'Subgroup Distribution vs Global (Min Coverage: {min_coverage})', fontsize=16)
     plt.legend(loc='lower right')
     
-    # Add a vertical line at x=0
+    # Add vertical line at 0
     plt.axvline(0, color='black', linewidth=0.8)
     
-    # Format x-axis to be absolute values
-    current_ticks = plt.gca().get_xticks()
-    plt.gca().set_xticklabels([abs(int(tick)) for tick in current_ticks])
+    # Fix x-axis labels to be positive numbers
+    ticks = plt.gca().get_xticks()
+    plt.gca().set_xticklabels([str(abs(int(t))) for t in ticks])
     
     plt.grid(axis='x', linestyle=':', alpha=0.5)
+
+   # --- 4. Add Value Annotations on Bars ---
+    
+    # FIX: Add 15% padding to x-axis so labels don't hit the image edge
+    max_val = max(max(pos_counts), max(neg_counts))
+    plt.xlim(-max_val * 1.15, max_val * 1.15) 
+
+    for i, (p_count, n_count) in enumerate(zip(pos_counts, neg_counts)):
+        # FIX: Skip labeling the Global Population (index 0) to avoid clutter
+        if i == 0:
+            continue
+
+        # Annotate Positive (Left side) - PD
+        plt.text(-p_count - (max_val*0.01), i, str(p_count), 
+                 ha='right', va='center', fontweight='bold', color='#bd6c1e', fontsize=10)
+        
+        # Annotate Negative (Right side) - CTR
+        plt.text(n_count + (max_val*0.01), i, str(n_count), 
+                 ha='left', va='center', fontweight='bold', color='#375573', fontsize=10)
+
     plt.tight_layout()
 
     try:
@@ -120,63 +161,6 @@ def plot_subgroup_analysis(task_0_rules, task_0_params, output_path):
     except Exception as e:
         print(f"Error saving subgroup plot: {e}")
     plt.close()
-
-# --- NEW: Cover Redundancy Calculation ---
-def calculate_cover_redundancy(top_k_rules_text, X_data_cpu, gene_names_list, num_features):
-    """
-    Calculates the Cover Redundancy (CR) metric from the paper.
-    CR = (1 / |S|) * sum(|c(t) - c_hat|)
-    """
-    print("\nCalculating Cover Redundancy for Top-K set...")
-    
-    # 1. Parse rule strings from the text block
-    rule_strings = parse_rules_from_text(top_k_rules_text)
-    if not rule_strings:
-        print("Could not parse any rules for CR calculation.")
-        return None
-        
-    print(f"  Found {len(rule_strings)} rules in the top-k set.")
-    
-    # 2. Re-create the cover for each rule
-    all_covers = []
-    for rule_str in rule_strings:
-        if rule_str == "Always true":
-            continue
-        
-        # Re-encode string "GENE=1" to a (mask, values) tensor
-        mask, values = re_encode_rule_from_string(rule_str, gene_names_list, num_features)
-        
-        # We only need the rule tensor part (mask + values)
-        rule_tensor_cpu = torch.cat([mask, values])
-        
-        # Get the boolean vector [n_samples] for this rule
-        matches_mask = get_rule_matches_cpu(rule_tensor_cpu, X_data_cpu, num_features)
-        all_covers.append(matches_mask.int()) # Store as 0s and 1s
-
-    if not all_covers:
-        print("No valid rule covers generated.")
-        return None
-
-    # 3. Calculate CR
-    # Stack all cover vectors [k, n_samples]
-    cover_matrix = torch.stack(all_covers)
-    
-    # c(t): cover count for each tuple (sample) [n_samples]
-    c_t = torch.sum(cover_matrix, dim=0).float()
-    
-    # c_hat: expected (average) cover count
-    c_hat = torch.mean(c_t)
-    
-    # |S|: total number of samples
-    S_size = float(X_data_cpu.shape[0])
-    
-    # CR = (1 / |S|) * sum(|c(t) - c_hat|)
-    cr_metric = torch.sum(torch.abs(c_t - c_hat)) / S_size
-    
-    cr_val = cr_metric.item()
-    print(f"  Cover Redundancy (CR) = {cr_val:.6f}")
-    return cr_val
-
 
 def gather_and_analyze(results_directory):
     """
