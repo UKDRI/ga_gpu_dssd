@@ -155,7 +155,17 @@ In contrast, the **Fibrotic State (Rule 4)** represents the **terminal collapse*
 The chronological stratification of these states informs the *timing* of interventions:
 - **Neuroprotective Agents (Mitochondrial/Iron):** Therapies targeting mitochondrial function or iron chelation must be administered in the **early disease phase**, targeting the Rule 1 and Rule 2 populations while they are still transcriptionally distinct and functional.
 - **Senolytics (Anti-Fibrotic):** Once neurons enter the **Rule 4 (Fibrotic)** state, metabolic rescue may be futile. Instead, this population may require "Senolytic" therapies (like anti-LINGO1) to clear dysfunctional cells or halt the fibrotic remodeling of the nigral microenvironment.
+** Future Directions: From In Silico Rules to In Vivo Validation
+While our GPU-accelerated framework has successfully mapped the static landscape of PD heterogeneity, confirming the causal dynamics of these states requires experimental validation.
 
+*** 1. Spatial Mapping of the Fibrotic Niche
+Our discovery of the **Fibrotic (Rule 4)** state raises a critical question: where are these "scarred" neurons located? Single-cell dissociation destroys spatial context. Future work should apply **Spatial Transcriptomics** (e.g., Visium or MERFISH) to human nigral tissue sections. We hypothesize that /PALD1+/ neurons will not be randomly distributed but will spatially cluster in "fibrotic niches," potentially surrounding microvasculature or areas of high glial reactivity, creating a toxic microenvironment that spreads senescence to neighboring cells.
+
+*** 2. Modeling State Transitions in iPSCs
+To validate the "Attractor State" theory, we propose an in vitro model using patient-derived induced pluripotent stem cells (iPSCs) differentiated into dopaminergic neurons. By subjecting these cultures to specific stressors—such as Rotenone (mitochondrial inhibitor) or Ferric Ammonium Citrate (iron overload)—we can test if neurons segregate into the predicted **Rule 1** and **Rule 2** transcriptional states. Furthermore, longitudinal single-cell sequencing of these cultures could definitively prove whether the **Rule 4** phenotype emerges as a late-stage consequence of prolonged exposure to these stressors, validating our chronological ordering.
+
+*** 3. Multi-Omics and Epigenetic Locking
+Finally, we aim to investigate why these states become stable. Are the "Metabolic" and "Iron-Toxic" states transient transcriptional fluctuations, or are they epigenetically locked? Future applications of DSSD should integrate **scATAC-seq** (chromatin accessibility) data. We hypothesize that the transition to the terminal **Rule 4** state is accompanied by widespread chromatin remodeling that permanently silences repair genes (/LINGO1/ upregulation), making metabolic rescue impossible without epigenetic reprogramming.
 * Conclusion
 ** Bridging High-Performance Computing and Mechanobiology
 This study demonstrates that the complexity of neurodegeneration cannot be fully resolved by standard clustering or greedy rule induction. By leveraging the massive parallelism of modern GPUs, we transformed Subgroup Discovery from a limited patient-stratification tool into a high-throughput engine for **Cell State Discovery**. The DSSD framework successfully navigated a combinatorial search space of $2^{1000}$ hypotheses to identify signals that were statistically invisible to random chance ($p < 0.001$) and orthogonal to standard transcriptomic clusters.
