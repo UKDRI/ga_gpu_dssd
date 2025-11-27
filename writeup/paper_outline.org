@@ -84,7 +84,7 @@ distinct cellular states.
 #+CAPTION: Differential Enrichment Heatmap of key biological markers across the three discovered subgroups. Values represent the difference in expression frequency between the subgroup and the background PD population (e.g., 0.25 indicates 25% higher prevalence). The plot reveals a strong double dissociation: Rule 1 is uniquely enriched for mitochondrial genes, Rule 2 for iron/stress markers, and Rule 4 for fibrosis/senescence markers.
 #+NAME: fig:mechanism_heatmap
 #+ATTR_LATEX: :width 0.7\textwidth :placement [H]
-[[./mechanism_heatmap.png]]
+[[./images/mechanism_heatmap.png]]
 
 * Discussion
 ** Deconstructing the "Mixed Bag"
