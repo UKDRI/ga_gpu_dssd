@@ -34,10 +34,13 @@
 - *Tier 2 (Distributed):* Scaled across 100 GPU nodes. Task 0 processed Real Data; Tasks 1-99 processed 999 Permutations.
 
 ** Biological Characterization (Phase 1.5)
-To interpret the "Black Box" rules found by the GA, we performed **Differential Enrichment Analysis (DEA)**:
-1.  *Internal DEA:* Compared Subgroup PD cells vs. Background PD cells to identify state-specific markers.
-2.  *External DEA:* Compared Subgroup Control cells vs. Background Control cells to test for disease specificity.
-3.  *Pathway Validation:* Enriched gene lists were validated against the Gene Ontology (GO) database using =gseapy=.
+While the GA generates fully interpretable rule definitions (e.g., PALD1=1), understanding the broader pathobiological context of these subgroups requires analyzing the full transcriptomic landscape. We performed Differential Enrichment Analysis (DEA) to map these rules to specific cellular mechanisms:
+
+1. Internal DEA: Compared Subgroup PD cells vs. Background PD cells to identify co-expressed genes and specific "failure modes" (e.g., fibrosis vs. metabolic stress).
+
+2. External DEA: Compared Subgroup Control cells vs. Background Control cells to determine if the phenotype is disease-specific or a conserved physiological state.
+
+3. Pathway Validation: Enriched gene lists were validated against the Gene Ontology (GO) database using gseapy to provide objective mechanistic definitions.
 
 * Results
 ** Computational & Statistical Performance
