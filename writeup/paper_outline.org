@@ -26,6 +26,7 @@ However, these early applications were defined by the "Small $N$, Large $P$" pro
 
 We repurpose this framework for the single-cell era, where $N$ is measured in thousands of cells. By treating **individual cells as instances**, we shift the focus from *Patient Stratification* to **Cell State Discovery**. We posit that non-overlapping subgroups in scRNA-seq data represent distinct, stable "attractor states" (e.g., Metabolic vs. Fibrotic) that co-exist within the same tissue, rather than different disease diagnoses.
 
+- Furthermore, we extend the DSSD framework to infer **temporal dynamics**. By calculating the transcriptomic distance of each discovered subgroup from the healthy baseline, we reconstruct the chronological trajectory of neurodegeneration, distinguishing between early adaptive stress responses and terminal cell fates without relying on complex pseudotime assumptions.
 ** Why DSSD? Set Optimization vs. Sequential Covering
 Traditional Subgroup Discovery algorithms often address redundancy through **Sequential Covering** (e.g., CN2-SD). In this approach, once a subgroup is found, the examples it covers are "down-weighted," encouraging the algorithm to look elsewhere for the next subgroup. While this does promote diversity, it is still a **greedy, iterative process**: the first subgroup found dictates the residual search space for the second.
 
@@ -143,7 +144,12 @@ This analysis revealed a clear hierarchy of degeneration. The **Iron-Toxic (Rule
 A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen & Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
 
 This confirms that PD heterogeneity is not random noise, but a structured composition of distinct failure modes. The algorithm effectively "de-mixed" the transcriptomic signal into its constituent drivers.
+** The Chronology of Collapse: A Unified Model of Degeneration
+Our transcriptomic distance analysis (Figure [[fig:trajectory_boxplot]]) integrates the three discovered states into a unified temporal model of dopaminergic failure.
 
+The proximity of the **Metabolic (Rule 1)** and **Iron-Toxic (Rule 2)** states to the healthy baseline suggests these represent **early, homeostatic checkpoints**. In this phase, neurons are actively fighting to maintain function—either by revving mitochondrial engines to restore ATP (Rule 1) or by sequestering toxic iron via Ferritin/CRYAB (Rule 2). The preservation of neuronal identity markers (e.g., /RBFOX3/) in these groups confirms they are functional, albeit stressed, neurons.
+
+In contrast, the **Fibrotic State (Rule 4)** represents the **terminal collapse** of these homeostatic mechanisms. The immense transcriptomic divergence, combined with the loss of metabolic markers and the upregulation of "scar" genes (/COL27A1/, /LINGO1/), indicates a transition to a senescent, non-functional phenotype. This suggests a "two-hit" model of PD progression: neurons initially segregate into specific stress-response trajectories (Metabolic vs. Iron) before eventually converging on a common, irreversible fibrotic fate.
 ** Therapeutic Implications
 The clear separation of these states has profound implications for precision medicine:
 - **Anti-LINGO1 therapies** (currently in trials) may only target the specific **Rule 4** sub-population ("Scarred Neurons").
