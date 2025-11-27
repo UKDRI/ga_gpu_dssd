@@ -150,10 +150,13 @@ Our transcriptomic distance analysis (Figure [[fig:trajectory_boxplot]]) integra
 The proximity of the **Metabolic (Rule 1)** and **Iron-Toxic (Rule 2)** states to the healthy baseline suggests these represent **early, homeostatic checkpoints**. In this phase, neurons are actively fighting to maintain function—either by revving mitochondrial engines to restore ATP (Rule 1) or by sequestering toxic iron via Ferritin/CRYAB (Rule 2). The preservation of neuronal identity markers (e.g., /RBFOX3/) in these groups confirms they are functional, albeit stressed, neurons.
 
 In contrast, the **Fibrotic State (Rule 4)** represents the **terminal collapse** of these homeostatic mechanisms. The immense transcriptomic divergence, combined with the loss of metabolic markers and the upregulation of "scar" genes (/COL27A1/, /LINGO1/), indicates a transition to a senescent, non-functional phenotype. This suggests a "two-hit" model of PD progression: neurons initially segregate into specific stress-response trajectories (Metabolic vs. Iron) before eventually converging on a common, irreversible fibrotic fate.
+
 ** Therapeutic Implications
-The clear separation of these states has profound implications for precision medicine:
-- **Anti-LINGO1 therapies** (currently in trials) may only target the specific **Rule 4** sub-population ("Scarred Neurons").
-- **Mitochondrial co-factors** would likely target the **Rule 1** population but may be ineffective for the **Rule 2** (Iron-Toxic) group, which requires chelation or aggregation inhibitors.
+The chronological stratification of these states informs the *timing* of interventions:
+- **Neuroprotective Agents (Mitochondrial/Iron):** Therapies targeting mitochondrial function or iron chelation must be administered in the **early disease phase**, targeting the Rule 1 and Rule 2 populations while they are still transcriptionally distinct and functional.
+- **Senolytics (Anti-Fibrotic):** Once neurons enter the **Rule 4 (Fibrotic)** state, metabolic rescue may be futile. Instead, this population may require "Senolytic" therapies (like anti-LINGO1) to clear dysfunctional cells or halt the fibrotic remodeling of the nigral microenvironment.
+
+
 
 ** Conclusion
 We have demonstrated that GPU-accelerated Parallel Genetic Algorithms can transform Subgroup Discovery from a theoretical exercise into a rigorous biological tool. By robustly identifying distinct cell states hidden within complex PD data, this framework provides a clear map of the heterogeneous landscape of neurodegeneration.
