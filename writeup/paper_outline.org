@@ -110,13 +110,13 @@ If the dataset contained a hidden fourth mechanism (e.g., an Inflammation-driven
 ** Differential Enrichment Reveals Mutually Exclusive Pathologies
 To determine if the discovered subgroups represented distinct biological states or merely varying degrees of general cellular stress, we analyzed the co-expression of key pathway markers across the three groups (Figure [[fig:mechanism_heatmap]]).
 
-The analysis revealed a striking **double dissociation** between the Metabolic and Fibrotic states. Cells in the **Metabolic Subgroup (Rule 1)** exhibited a specific upregulation of mitochondrial complex I and IV genes (mean enrichment +0.18 to +0.26) while showing depletion or baseline levels of fibrosis markers. Conversely, cells in the **Fibrotic Subgroup (Rule 4)** showed strong upregulation of /LINGO1/ and /COL27A1/ (+0.21 to +0.23) but downregulation of mitochondrial genes.
+The analysis revealed a striking **triple dissociation** between the Metabolic, Iron-Toxic, and Fibrotic states:
 
-This "anti-correlation" of mechanisms confirms that these are not
-random subsets of sick cells, but rather mutually exclusive attractor
-states. A neuron effectively commits to a specific failure mode: it
-either engages a metabolic overdrive (Rule 1) or succumbs to fibrotic
-remodeling (Rule 4), but rarely both simultaneously.
+1.  **Metabolic Specificity:** Cells in the **Metabolic Subgroup (Rule 1)** exhibited a specific upregulation of mitochondrial complex I and IV genes (mean enrichment +0.18 to +0.26) while showing depletion or baseline levels of fibrosis markers.
+2.  **Fibrotic Specificity:** Conversely, cells in the **Fibrotic Subgroup (Rule 4)** showed strong upregulation of /LINGO1/ and /COL27A1/ (+0.21 to +0.23) but downregulation of mitochondrial genes (e.g., /MT-CO3/ -0.06).
+3.  **Iron/Stress Specificity:** The **Iron Subgroup (Rule 2)** displayed a unique signature defined by /FTL/ and /CRYAB/ (+0.11 to +0.12). Crucially, these cells did not show the broad mitochondrial upregulation of Rule 1 nor the fibrotic scarring of Rule 4, confirming that Iron Toxicity represents an independent axis of cellular failure.
+
+This "anti-correlation" of mechanisms confirms that these are not random subsets of sick cells, but rather mutually exclusive attractor states. A neuron effectively commits to a specific failure mode: it engages a metabolic overdrive (Rule 1), succumbs to fibrotic remodeling (Rule 4), or battles iron toxicity (Rule 2), but rarely exhibits all three pathologies simultaneously.
 
 ** Disease-Specificity of the Fibrotic State
 We further investigated whether these cellular states represent physiological functions or pathological transformations by applying the discovered rules to the healthy control population.
