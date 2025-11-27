@@ -155,6 +155,19 @@ In contrast, the **Fibrotic State (Rule 4)** represents the **terminal collapse*
 The chronological stratification of these states informs the *timing* of interventions:
 - **Neuroprotective Agents (Mitochondrial/Iron):** Therapies targeting mitochondrial function or iron chelation must be administered in the **early disease phase**, targeting the Rule 1 and Rule 2 populations while they are still transcriptionally distinct and functional.
 - **Senolytics (Anti-Fibrotic):** Once neurons enter the **Rule 4 (Fibrotic)** state, metabolic rescue may be futile. Instead, this population may require "Senolytic" therapies (like anti-LINGO1) to clear dysfunctional cells or halt the fibrotic remodeling of the nigral microenvironment.
+
+** Contextualizing the Triple Dissociation within the PD Landscape
+Our application of DSSD reveals that the heterogeneity of the substantia nigra is not stochastic, but structured into distinct failure modes that align with, yet refine, major hypotheses in the field.
+
+*** 1. Metabolic Compensation vs. Collapse
+The identification of the **Rule 1 (Metabolic)** subgroup provides high-resolution evidence for the long-standing "Bioenergetic Crisis" hypothesis. While Complex I deficiency is a hallmark of PD pathology, bulk transcriptomics often show conflicting downregulation or upregulation of mitochondrial genes. Our results resolve this paradox: we identify a specific sub-population engaged in massive transcriptional upregulation of Complex I/IV (/MT-ND4/, /MT-CO3/). This aligns with the "Compensatory Hypothesis," suggesting that a subset of neurons can sustain function despite metabolic insults by overriding the nuclear repressor /NCOR2/, potentially explaining the "slow-burn" nature of dopaminergic loss compared to acute toxicity models.
+
+*** 2. Iron Toxicity and the Chaperone Defense
+The **Rule 2 (Iron-Toxic)** subgroup creates a crucial link between iron accumulation and proteostasis. While iron deposition (siderosis) is a known feature of the PD nigrosome, it has remained unclear whether this occurs in all dying neurons. Our findings demonstrate that iron toxicity is a **distinct state**, orthogonal to the metabolic compensation phenotype. The unique co-expression of /CRYAB/ (Alpha-Crystallin B) in this subgroup is particularly significant; /CRYAB/ is a small heat-shock protein known to inhibit alpha-synuclein aggregation under oxidative stress. This suggests that the "Iron State" is defined by a specific battle against ferroptosis-induced aggregation, independent of the bioenergetic failure seen in Rule 1.
+
+*** 3. LINGO1 and the Fibrotic Niche
+Perhaps the most clinically relevant finding is the isolation of the **Rule 4 (Fibrotic)** state. /LINGO1/ has been a target of high-profile clinical trials (e.g., Opicinumab) for neuroregeneration, with mixed success. Our data offers a mechanistic explanation for these failures: /LINGO1/ expression is not a universal feature of PD neurons but is restricted to a specific, terminal "fibrotic" sub-population. Treating a "Rule 1" (Metabolic) patient with an anti-LINGO1 agent would likely be futile, as their neurons lack the target. This highlights the necessity of stratifying patients—or even stratifying cellular targets within a patient—based on the prevalence of these specific attractor states.
+
 ** Future Directions: From In Silico Rules to In Vivo Validation
 While our GPU-accelerated framework has successfully mapped the static landscape of PD heterogeneity, confirming the causal dynamics of these states requires experimental validation.
 
