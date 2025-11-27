@@ -144,6 +144,12 @@ This analysis revealed a clear hierarchy of degeneration. The **Iron-Toxic (Rule
 #+ATTR_LATEX: :width 0.9\textwidth :placement [H]
 [[./images/trajectory_boxplot.png]]
 
+
+#+CAPTION: The Rule 2 "Iron-Toxic" phenotype is orthogonal to global transcriptomic clusters. (Left) UMAP projection of all cells, with Rule 2 cells colored in red. The lack of a distinct spatial island confirms that this state does not correspond to a single cell type identity. (Right) Prevalence of the Iron-Toxic state across standard Seurat clusters. While some clusters (e.g., 0, 4) show higher susceptibility, the phenotype is distributed across the entire dopaminergic population, indicating a pan-lineage stress response.
+#+NAME: fig:rule2_orthogonal
+#+ATTR_LATEX: :width 1.0\textwidth :placement [H]
+[[./images/rule2_combined_labeled.png]]
+
 * Discussion
 ** Beyond the "Table Mountain"
 A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen & Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
