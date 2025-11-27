@@ -70,6 +70,12 @@ The framework executed a deep search equivalent to ~72,000 hours of sequential c
 ** Biological Discovery: A Triple Dissociation of Failure Modes
 The DSSD algorithm successfully decomposed the PD population into three robust, non-overlapping subgroups. The lack of overlap suggests these represent distinct "Attractor States" of cellular failure rather than a continuous gradient.
 
+** Validation via Blinded Re-Discovery ("Shadow Run")
+To rigorously test the hypothesis that the three discovered states represent the exhaustive dominant signals in the dataset, we performed a "Shadow Run." We created a blinded dataset by removing all 19 genes associated with the primary rules (including /PALD1/, /FTH1/, /NCOR2/) and re-deployed the GPU framework.
+
+If the dataset contained a hidden fourth mechanism (e.g., an Inflammation-driven state distinct from the Iron/Fibrosis states), the algorithm would be expected to converge on this new signal. However, the Shadow Run failed to identify any subgroup with a fitness score exceeding the permutation noise floor ($p > 0.05$). This result strongly suggests that the three described failure modes—Metabolic, Iron-Toxic, and Fibrotic—constitute the comprehensive landscape of transcriptomic heterogeneity in this cohort, rather than merely being the first of many weak signals.
+
+
 #+CAPTION: Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup.
 #+NAME: fig:subgroup_composition
 #+ATTR_LATEX: :width 0.9\textwidth :placement [H]
@@ -101,6 +107,21 @@ The DSSD algorithm successfully decomposed the PD population into three robust, 
 #+ATTR_LATEX: :width 0.65\textwidth :placement [H]
 [[./images/pathway_validation_figure.png]]
 
+** Differential Enrichment Reveals Mutually Exclusive Pathologies
+To determine if the discovered subgroups represented distinct biological states or merely varying degrees of general cellular stress, we analyzed the co-expression of key pathway markers across the three groups (Figure [[fig:mechanism_heatmap]]).
+
+The analysis revealed a striking **double dissociation** between the Metabolic and Fibrotic states. Cells in the **Metabolic Subgroup (Rule 1)** exhibited a specific upregulation of mitochondrial complex I and IV genes (mean enrichment +0.18 to +0.26) while showing depletion or baseline levels of fibrosis markers. Conversely, cells in the **Fibrotic Subgroup (Rule 4)** showed strong upregulation of /LINGO1/ and /COL27A1/ (+0.21 to +0.23) but downregulation of mitochondrial genes.
+
+This "anti-correlation" of mechanisms confirms that these are not
+random subsets of sick cells, but rather mutually exclusive attractor
+states. A neuron effectively commits to a specific failure mode: it
+either engages a metabolic overdrive (Rule 1) or succumbs to fibrotic
+remodeling (Rule 4), but rarely both simultaneously.
+
+** Disease-Specificity of the Fibrotic State
+We further investigated whether these cellular states represent physiological functions or pathological transformations by applying the discovered rules to the healthy control population.
+
+While the **Metabolic State (Rule 1)** was detectable in controls, the **Fibrotic State (Rule 4)** showed a qualitative transformation in the disease context. In controls, /PALD1/+ neurons expressed healthy neuronal markers (/RBFOX3/, /PRDM16/) but lacked the pathological signature. In PD patients, this same cell lineage specifically acquired the expression of **=LINGO1=** (an inhibitor of regeneration) and extracellular matrix collagens. This identifies the /PALD1/+ lineage as a selectively vulnerable population that undergoes a specific fibrotic transformation in the disease environment.
 * Discussion
 ** Beyond the "Table Mountain"
 A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen & Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
