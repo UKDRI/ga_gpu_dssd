@@ -11,18 +11,17 @@
 - Conclusion :: We demonstrate that GPU-accelerated evolutionary mining can robustly untangle the "mixed bag" of neurodegeneration into actionable, mechanistically distinct cell states.
 
 * Introduction
-** The Biological Challenge: Gain of Dysfunction and Loss of Health
-- Parkinson's Disease degeneration is asynchronous. At any moment, the tissue contains a mixture of healthy, compensating, and dying cells.
-- *The Hypothesis:* We posit that "non-overlapping subgroups" in scRNA-seq data correspond to distinct **failure modes**.
-- Standard differential expression averages these signals. For example, if 30% of cells have high Iron and 30% have high Fibrosis, averaging them dilutes both signals. DSSD isolates these signals into discrete rules.
+** The Biological Challenge: The "Mixed Bag" of Neurodegeneration
+Parkinson's Disease (PD) degeneration is asynchronous. At any given moment, the substantia nigra contains a mixture of healthy, compensating, and dying cells. Standard analysis pipelines typically rely on clustering (e.g., Louvain/Leiden), which forces cells into mutually exclusive groups based on global transcriptomic similarity. However, biological processes are often continuous or overlapping; a cell may possess a specific "Dopaminergic Identity" while simultaneously undergoing a specific "Metabolic Stress" state.
 
-** The Computational Definition: What is a Subgroup?
-- We define a "Subgroup Description" as a high-order combinatorial rule (e.g., =Gene A=1 AND Gene B=0 AND Gene C=1=).
-- A subgroup is "interesting" if the distribution of disease labels (PD vs. CTRL) within the subset deviates significantly from the global population.
+We posit that **Subgroup Discovery (SD)** is uniquely suited to solve this problem. Unlike clustering, SD identifies local patterns: logic rules that describe a specific subset of interest without forcing a global partition of the data.
 
-** Why DSSD? Optimizing Sets over Singletons
-- Standard algorithms are greedy, finding many variations of the same strongest rule ("Table Mountain" redundancy).
-- *Set Optimization:* Our fitness function evaluates a *chromosome of multiple rules*. It heavily penalizes overlap, forcing the GA to find *distinct* biological mechanisms rather than just the largest one.
+** The Computational Innovation: From Greedy Search to DSSD
+Historical applications of Subgroup Discovery in transcriptomics (e.g., Lavrač et al., 2004; Pieters et al., 2010) typically focused on microarray data, where "instances" were patients. The goal was patient stratification. In the single-cell era, we treat **cells as instances**, allowing us to map the landscape of cellular states.
+
+However, applying SD to high-dimensional single-cell data presents a massive search space ($2^{1000}$ combinations). Standard "Top-$k$" algorithms are greedy: they tend to return highly redundant variations of the single strongest signal—a phenomenon known as the **"Table Mountain" effect** (van Leeuwen & Knobbe, 2012).
+
+To overcome this, we implement **Diverse Subgroup Set Discovery (DSSD)**. Instead of optimizing individual rules, we optimize a *set* of rules simultaneously. By penalizing overlap between rules in the fitness function, we force the algorithm to ignore redundant variations and discover distinct, orthogonal biological mechanisms.
 
 * Methods
 ** Single-Cell Data Preprocessing
@@ -30,74 +29,77 @@
 - *Input:* Top 1,000 variable genes, binarized to facilitate logical rule generation.
 
 ** The Hierarchical GPU-Accelerated Framework
-- *Tier 1 (Vectorized):* Custom PyTorch kernels run 10 independent GA populations (Pop=55) simultaneously on a single GPU using =int8= tensor broadcasting.
-- *Tier 2 (Distributed):* Scaled across 100 GPU nodes. Task 0 processed Real Data; Tasks 1-99 processed 999 Permutations.
+To navigate the combinatorial search space, we developed a two-tier parallel Genetic Algorithm (GA) optimized for Intel PVC GPUs.
+
+- *Tier 1 (Vectorized Intra-Node):* We utilize custom PyTorch kernels to evaluate 10 independent GA populations (Pop=55) simultaneously on a single GPU. By creating a dense tensor of size $[10 \times 55 \times 1000]$ and utilizing =int8= bit-packing, we achieve massive throughput for the boolean logic operations required by rule evaluation.
+- *Tier 2 (Distributed Inter-Node):* The search is scaled across 100 GPU nodes. Task 0 processes the Real Data, while Tasks 1-99 process 999 randomized permutations to establish a rigorous null distribution.
+
+** Fitness Function: Optimizing for Diversity
+We employ a modified Weighted Relative Accuracy (WRAcc) that explicitly accounts for set diversity. The fitness $F$ of a chromosome (a set of $k$ rules) is defined as:
+
+$$ F = \frac{\sum_{i=1}^{k} WRAcc(Rule_i)}{1 + \lambda \cdot Overlap(Rule_1...Rule_k)} $$
+
+Where $\lambda$ is a penalty factor for cells covered by multiple rules. This drives the evolutionary pressure towards finding **non-overlapping** cell states.
 
 ** Biological Characterization (Phase 1.5)
-While the GA generates fully interpretable rule definitions (e.g., PALD1=1), understanding the broader pathobiological context of these subgroups requires analyzing the full transcriptomic landscape. We performed Differential Enrichment Analysis (DEA) to map these rules to specific cellular mechanisms:
-
-1. Internal DEA: Compared Subgroup PD cells vs. Background PD cells to identify co-expressed genes and specific "failure modes" (e.g., fibrosis vs. metabolic stress).
-
-2. External DEA: Compared Subgroup Control cells vs. Background Control cells to determine if the phenotype is disease-specific or a conserved physiological state.
-
-3. Pathway Validation: Enriched gene lists were validated against the Gene Ontology (GO) database using gseapy to provide objective mechanistic definitions.
+While the GA generates fully interpretable rule definitions (e.g., =PALD1=1=), we performed **Differential Enrichment Analysis (DEA)** to map these rules to broader pathobiological contexts:
+1.  *Internal DEA:* Compared Subgroup PD cells vs. Background PD cells to identify specific "failure modes."
+2.  *External DEA:* Compared Subgroup Control cells vs. Background Control cells to determine disease specificity.
+3.  *Validation:* Gene lists were validated against the Gene Ontology (GO) database using =gseapy=.
 
 * Results
 ** Computational & Statistical Performance
-- The framework executed a deep search equivalent to ~72,000 hours of sequential computation in <36 hours.
-- *Significance:* The "Real Data" champion achieved a fitness of **0.0621**, while the maximum fitness found in 999 randomized datasets was **0.0294**.
-- *Conclusion:* The discovered structure is statistically significant ($p < 0.001$) and cannot be generated by noise.
-
+The framework executed a deep search equivalent to ~72,000 hours of sequential computation in <36 hours. The "Real Data" champion achieved a fitness of **0.0621**, while the maximum fitness found in 999 randomized datasets was **0.0294**.
 
 #+CAPTION: Empirical Null Distribution generated via 1,000 GPU-accelerated permutation tests. The red line ($F_{real}$) indicates the fitness of the discovered rule set, significantly exceeding the maximum fitness found in random noise ($p < 0.001$).
 #+NAME: fig:fitness_histogram
 #+ATTR_LATEX: :width 0.8\textwidth :placement [H]
 [[../18nov_prod_36hours/fitness_histogram.png]]
-** Biological Discovery: A Triple Dissociation of Failure Modes
-The GA identified three robust, non-overlapping subgroups representing
-distinct cellular states.
 
-#+CAPTION: Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules, relative to the total global population. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup. The explicit cell counts are annotated on each bar.
+** Biological Discovery: A Triple Dissociation of Failure Modes
+The DSSD algorithm successfully decomposed the PD population into three robust, non-overlapping subgroups. The lack of overlap suggests these represent distinct "Attractor States" of cellular failure rather than a continuous gradient.
+
+#+CAPTION: Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup.
 #+NAME: fig:subgroup_composition
 #+ATTR_LATEX: :width 0.9\textwidth :placement [H]
 [[../18nov_prod_36hours/subgroup_analysis.png]]
 
 *** 1. The Metabolic Compensation State (Rule 1)
-- *Definition:* =NCOR2=0 AND FAM19A5=0 AND MT-ND4L=1...=
-- *Enrichment:* These cells exhibit massive upregulation of Mitochondrial Complex I and IV subunits (=MT-ND4=, =MT-CO3=, =MT-ATP6=).
-- *Mechanism:* The loss of the nuclear repressor =NCOR2= appears to trigger a compensatory transcriptional program to restore ATP deficits.
-- *Validation:* Gene Ontology analysis confirmed enrichment for "Mitochondrial Respiratory Chain Complex Assembly" ($p < 10^{-20}$) and "Leber Hereditary Optic Neuropathy."
+- *Definition:* =NCOR2=0 AND MT-ND4L=1...=
+- *Mechanism:* The loss of the nuclear repressor =NCOR2= co-occurs with a massive upregulation of Mitochondrial Complex I and IV subunits (=MT-ND4=, =MT-CO3=). This suggests a population under severe metabolic stress attempting to restore ATP deficits via transcriptional compensation.
+- *Validation:* GO analysis confirmed enrichment for "Mitochondrial Respiratory Chain Complex Assembly" ($p < 10^{-20}$).
 
 *** 2. The Iron-Toxic Stress State (Rule 2)
 - *Definition:* =FTH1=1 AND RBX1=0...=
-- *Enrichment:* Defined by high Ferritin Heavy Chain (=FTH1=) and Light Chain (=FTL=). Crucially, these cells uniquely express **Alpha-Crystallin B (=CRYAB=)**, a heat-shock protein linked to alpha-synuclein aggregation protection.
-- *Mechanism:* Unlike healthy iron-rich cells, these PD cells exhibit a specific stress response (=CRYAB=, =HSP90=) indicative of iron toxicity.
+- *Mechanism:* Defined by high Ferritin Heavy/Light Chain (=FTH1=, =FTL=). Crucially, this is the *only* subgroup that upregulates **=CRYAB=**, a heat-shock protein linked to alpha-synuclein aggregation protection. This distinguishes it as a state of active Iron Toxicity management.
 - *Validation:* GO analysis confirmed "Cytoplasmic Translation" ($p < 0.001$), reflecting the high protein synthesis demand of Ferritin sequestration.
 
 *** 3. The Fibrotic/Senescent State (Rule 4)
 - *Definition:* =PALD1=1=
-- *Enrichment:* Enriched for **=LINGO1=** (negative regulator of axonal repair) and extracellular matrix collagens (=COL27A1=, =COL5A1=).
-- *Disease Specificity:* While =PALD1+= cells exist in healthy controls (marked by =RBFOX3=), the pathological markers =LINGO1= and =COL5A1= are **exclusive to the PD population**.
-- *Mechanism:* This represents a "terminal" state where neurons have ceased repair efforts and are actively scarring the extracellular environment.
+- *Mechanism:* This state is enriched for **=LINGO1=** (negative regulator of axonal repair) and extracellular matrix collagens (=COL27A1=).
+- *Disease Specificity:* External DEA revealed that while =PALD1+= cells exist in healthy controls (marked by =RBFOX3=), the pathological markers =LINGO1= and =COL5A1= are **exclusive to the PD population**.
 - *Validation:* GO analysis confirmed "Extracellular Matrix Organization" ($p < 10^{-8}$) and "Regulation of Small GTPase Signaling."
 
-#+CAPTION: Differential Enrichment Heatmap of key biological markers across the three discovered subgroups. Values represent the difference in expression frequency between the subgroup and the background PD population (e.g., 0.25 indicates 25% higher prevalence). The plot reveals a strong double dissociation: Rule 1 is uniquely enriched for mitochondrial genes, Rule 2 for iron/stress markers, and Rule 4 for fibrosis/senescence markers.
+#+CAPTION: Differential Enrichment Heatmap proving the **Double Dissociation** of cell states. Rule 1 is uniquely enriched for mitochondrial genes (Top Left, Red) but depleted for fibrosis markers. Rule 4 is uniquely enriched for fibrosis/senescence markers (Bottom Right, Red). Rule 2 shows a distinct Iron/Stress signature.
 #+NAME: fig:mechanism_heatmap
 #+ATTR_LATEX: :width 0.7\textwidth :placement [H]
 [[./images/mechanism_heatmap.png]]
 
-#+CAPTION: Figure 4: Pathway and Ontology Validation. Over-Representation Analysis (ORA) confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological mechanisms. (Top) The Rule 1 subgroup is defined by mitochondrial dysfunction, showing extreme enrichment for "Leber hereditary optic neuropathy" ($p < 10^{-28}$) and "Mitochondrial myopathy." (Middle) The Rule 2 subgroup exhibits a signature of "Cytoplasmic Translation" ($p < 10^{-3}$) and "Cation Channel Activity," consistent with the cellular machinery required for ferritin-mediated iron sequestration. (Bottom) The Rule 4 subgroup is characterized by "Regulation of Small GTPase Mediated Signal Transduction" ($p < 0.01$), a key driver of cytoskeletal remodeling and fibrosis. Bars represent the negative log p-value (higher is more significant). The dashed line indicates the significance threshold ($p=0.05$).
+#+CAPTION: Pathway and Ontology Validation. Over-Representation Analysis (ORA) confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological mechanisms. Bars represent the negative log p-value.
 #+NAME: fig:pathway_validation
 #+ATTR_LATEX: :width 0.65\textwidth :placement [H]
-[[./images/pathway_validation_figure.png]]
+[[./images/pathway_validation_figure_clean.png]]
 
 * Discussion
-** Deconstructing the "Mixed Bag"
-Standard analysis pools these cells together. Our results demonstrate that "PD Neurons" are not a monolith. At any given time, a neuron might be fighting a Metabolic battle (Rule 1), suffering Iron Toxicity (Rule 2), or surrendering to Senescence/Fibrosis (Rule 4).
+** Beyond the "Table Mountain"
+A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen & Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
+
+This confirms that PD heterogeneity is not random noise, but a structured composition of distinct failure modes. The algorithm effectively "de-mixed" the transcriptomic signal into its constituent drivers.
 
 ** Therapeutic Implications
-- *Rule 4 (Fibrosis)* suggests that anti-LINGO1 therapies may only target a specific sub-population (the "scarred" neurons).
-- *Rule 1 (Metabolic)* suggests a distinct population that might benefit from mitochondrial co-factors, which would be ineffective for the Iron-Toxic group.
+The clear separation of these states has profound implications for precision medicine:
+- **Anti-LINGO1 therapies** (currently in trials) may only target the specific **Rule 4** sub-population ("Scarred Neurons").
+- **Mitochondrial co-factors** would likely target the **Rule 1** population but may be ineffective for the **Rule 2** (Iron-Toxic) group, which requires chelation or aggregation inhibitors.
 
 ** Conclusion
 We have demonstrated that GPU-accelerated Parallel Genetic Algorithms can transform Subgroup Discovery from a theoretical exercise into a rigorous biological tool. By robustly identifying distinct cell states hidden within complex PD data, this framework provides a clear map of the heterogeneous landscape of neurodegeneration.
