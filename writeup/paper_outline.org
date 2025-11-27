@@ -133,6 +133,9 @@ To infer the progression of these disease states, we calculated the Manhattan di
 
 This analysis revealed a clear hierarchy of degeneration. The **Iron-Toxic (Rule 2)** and **Metabolic (Rule 1)** states exhibited the lowest distance from health (Median Distance $\approx$ 305), suggesting they represent early, homeostatic stress responses where neuronal identity is largely preserved. In contrast, the **Fibrotic State (Rule 4)** showed the greatest divergence (Median Distance $\approx$ 340, $p < 0.001$), confirming its status as a terminal, irreversible state where the transcriptomic landscape has been fundamentally remodeled towards senescence and scarring.
 
+#+CAPTION: Trajectory of Failure. Boxplots showing the Manhattan transcriptomic distance of each PD subgroup from the average Healthy Control centroid. The Iron-Toxic (Rule 2) and Metabolic (Rule 1) states remain closer to the healthy baseline, indicating early-stage stress responses. The Fibrotic (Rule 4) state shows significantly higher divergence, consistent with a terminal loss of neuronal identity and transition to a scar-like phenotype.
+#+NAME: fig:trajectory_boxplot
+#+ATTR_LATEX: :width 0.9\textwidth :placement [H]
 [[./images/trajectory_boxplot.png]]
 
 * Discussion
