@@ -81,6 +81,11 @@ distinct cellular states.
 - *Mechanism:* This represents a "terminal" state where neurons have ceased repair efforts and are actively scarring the extracellular environment.
 - *Validation:* GO analysis confirmed "Extracellular Matrix Organization" ($p < 10^{-8}$) and "Regulation of Small GTPase Signaling."
 
+#+CAPTION: Differential Enrichment Heatmap of key biological markers across the three discovered subgroups. Values represent the difference in expression frequency between the subgroup and the background PD population (e.g., 0.25 indicates 25% higher prevalence). The plot reveals a strong double dissociation: Rule 1 is uniquely enriched for mitochondrial genes, Rule 2 for iron/stress markers, and Rule 4 for fibrosis/senescence markers.
+#+NAME: fig:mechanism_heatmap
+#+ATTR_LATEX: :width 0.7\textwidth :placement [H]
+[[./mechanism_heatmap.png]]
+
 * Discussion
 ** Deconstructing the "Mixed Bag"
 Standard analysis pools these cells together. Our results demonstrate that "PD Neurons" are not a monolith. At any given time, a neuron might be fighting a Metabolic battle (Rule 1), suffering Iron Toxicity (Rule 2), or surrendering to Senescence/Fibrosis (Rule 4).
