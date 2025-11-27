@@ -11,9 +11,13 @@
 - Conclusion :: We demonstrate that GPU-accelerated evolutionary mining can robustly untangle the "mixed bag" of neurodegeneration into actionable, mechanistically distinct cell states.
 
 * Introduction
-** The Biological Challenge: The "Mixed Bag" of Neurodegeneration
-Parkinson's Disease (PD) degeneration is asynchronous. At any given moment, the substantia nigra contains a mixture of healthy, compensating, and dying cells. Standard analysis pipelines typically rely on clustering (e.g., Louvain/Leiden), which forces cells into mutually exclusive groups based on global transcriptomic similarity. However, biological processes are often continuous or overlapping; a cell may possess a specific "Dopaminergic Identity" while simultaneously undergoing a specific "Metabolic Stress" state.
 
+** The Biological Challenge: Gain of Dysfunction and Loss of Health
+- Parkinson’s Disease (PD) degeneration is asynchronous. At any given moment, the substantia nigra contains a "mixed bag" of healthy, compensating, and dying cells.
+- Standard analysis pipelines typically rely on unsupervised clustering (e.g., Louvain/Leiden) followed by differential expression. However, this approach faces two fundamental limitations when dissecting disease heterogeneity:
+  1. **Post-hoc Association vs. Supervised Search:** Clustering partitions cells based on *global* transcriptomic similarity (e.g., cell type identity) and only assesses disease association *post-hoc*. This risks drowning out subtle, disease-specific signals that do not drive the principal components of variance. In contrast, Subgroup Discovery is inherently **supervised**: it utilizes the disease labels (PD vs. CTRL) directly within the search objective, optimizing specifically for rules that discriminate cellular states associated with the pathology.
+  2. **Exhaustive Partitioning vs. Local Discovery:** Clustering algorithms are typically exhaustive, forcing every cell—including noisy or ambiguous ones—into a distinct group. This often obscures rare or transitional states within larger "garbage collector" clusters. DSSD, conversely, does not attempt to model the entire population. Instead, it acts as a "spotlight," identifying only the specific subsets of cells that carry a strong biological signal while leaving the uninformative background unstructured.
+- While standard clustering imposes mutual exclusion as a mathematical constraint, DSSD allows for the discovery of overlapping rules. However, by explicitly penalizing redundancy in our evolutionary framework, we aim to discover **non-overlapping, orthogonal subgroups** that represent distinct, independent failure modes rather than redundant descriptions of the same phenomenon.
 ** The Computational Innovation: From Patient Stratification to Cellular States
 Subgroup Discovery (SD) has a rich history in bioinformatics. In the microarray era, seminal works by **Gamberger et al. (2004)** and **Lavrač et al. (2004)** demonstrated that SD could find interpretable rules to stratify patients (e.g., /"Patients with high Gene X and low Gene Y have Leukemia Type A"/).
 
@@ -21,7 +25,7 @@ However, these early applications were limited by sample size ($N < 100$ patient
 
 ** Why DSSD? Optimizing Sets over Singletons
 Applying SD to high-dimensional single-cell data creates a search space of $2^{1000}$ combinations. Standard "Top-$k$" algorithms are greedy: they return redundant variations of the single strongest signal (the "Table Mountain" effect). We implement **Diverse Subgroup Set Discovery (DSSD)** to optimize a *set* of rules simultaneously, penalizing overlap to force the discovery of orthogonal biological mechanisms.
-
+To overcome this, we implement **Diverse Subgroup Set Discovery (DSSD)**. Instead of optimizing individual rules, we optimize a *set* of rules simultaneously. By penalizing overlap between rules in the fitness function, we force the algorithm to ignore redundant variations and discover distinct, orthogonal biological mechanisms.
 
 * Methods
 ** Single-Cell Data Preprocessing
