@@ -1,93 +1,79 @@
-#+TITLE: Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework for Robustly Identifying Distinct Cell States in Parkinson’s Disease
+#+TITLE: Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework Identifies Distinct Metabolic, Fibrotic, and Iron-Toxic States in Parkinson’s Disease
 #+AUTHOR: Sam Neaves
-#+DATE: <2025-10-30>
+#+DATE: <2025-11-28>
 #+OPTIONS: toc:nil num:t
 
 * Abstract
-- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet this process is not uniform. Single-cell RNA sequencing (scRNA-seq) reveals high heterogeneity, but standard methods often fail to capture robust, combinatorial gene signatures that define distinct cell states. This includes not only "failure modes" specific to PD but also "healthy states" found in controls that are lost during disease progression.
-- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) to this problem. Unlike standard methods that seek a single "best" rule, our framework evolves a *set* of subgroup descriptions simultaneously. Each description defines a subset of cells where the distribution of disease labels significantly deviates from the overall population. To navigate the vast search space, we developed a *Parallel Genetic Algorithm (GA)* optimized for GPU acceleration.
-- Rigor :: We addressed the "look-elsewhere" effect inherent in high-dimensional mining by implementing a massive-scale permutation test. We ran independent parallel searches on real and randomized neuronal data using an *"Equal Computational Effort"* principle (100 nodes x 72 hours).
-- Results :: The framework executed a deep search equivalent to ~72,000 hours of sequential computation. It identified a combinatorial gene signature with a fitness score statistically unreachable by chance ($p < 0.001$). This signature defines a robust, non-overlapping cell state that provides a precise molecular definition of specific neuronal subpopulations.
-- Conclusion :: This study demonstrates that DSSD, powered by parallel GPU computing and rigorous statistics, is a powerful paradigm for untangling the heterogeneity of dopaminergic neurodegeneration.
+- Background :: Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet scRNA-seq reveals high heterogeneity in cellular decline. Standard clustering often fails to resolve overlapping failure modes or distinguish disease-specific states from healthy stress responses.
+- Methodology :: We applied Diverse Subgroup Set Discovery (DSSD) using a custom **Parallel Genetic Algorithm** on the DAWN HPC (Intel PVC GPUs). Unlike greedy algorithms, our framework evolves a set of rules simultaneously to maximize population coverage while minimizing redundancy. We validated findings using "Shadow Runs" (blinded re-discovery) and Differential Enrichment Analysis against background PD and Control populations.
+- Rigor :: We addressed the "look-elsewhere" effect via a massive-scale permutation test, running 1,000 concurrent searches on real and randomized data (~72,000 GPU-hours equivalent).
+- Results :: The framework identified a global solution with fitness statistically unreachable by chance ($p < 0.001$). This solution decomposed the PD population into three distinct, non-overlapping failure modes: (1) A **Metabolic Compensation** state defined by /NCOR2/ loss and mitochondrial upregulation; (2) An **Iron-Toxic** state defined by /FTH1/ and /CRYAB/-mediated stress; and (3) A **Fibrotic/Senescent** state defined by /PALD1/ and /LINGO1/ which is notably absent in healthy controls.
+- Conclusion :: We demonstrate that GPU-accelerated evolutionary mining can robustly untangle the "mixed bag" of neurodegeneration into actionable, mechanistically distinct cell states.
 
 * Introduction
 ** The Biological Challenge: Gain of Dysfunction and Loss of Health
-- Parkinson's Disease primarily affects dopaminergic neurons, but degeneration is asynchronous. At any given moment, the tissue contains a "mixed bag" of cells.
-- *The Core Hypothesis:* We posit that "non-overlapping subgroups" in scRNA-seq data correspond to *distinct neuronal states*.
-  - These can be *PD-Specific States* (e.g., a subgroup defined by mitochondrial collapse).
-  - Crucially, they can also be *CTRL-Specific States* (e.g., a high-functioning metabolic state) that are present in healthy controls but vanish in the disease.
-- Standard differential expression averages these signals across the entire population, washing out the specific combinatorial logic of these distinct states.
+- Parkinson's Disease degeneration is asynchronous. At any moment, the tissue contains a mixture of healthy, compensating, and dying cells.
+- *The Hypothesis:* We posit that "non-overlapping subgroups" in scRNA-seq data correspond to distinct **failure modes**.
+- Standard differential expression averages these signals. For example, if 30% of cells have high Iron and 30% have high Fibrosis, averaging them dilutes both signals. DSSD isolates these signals into discrete rules.
 
 ** The Computational Definition: What is a Subgroup?
-- We define a "Subgroup Description" as a logical rule (e.g., =IF Gene A is Low AND Gene B is High=) that selects a specific subset of cells.
-- A subgroup is considered "interesting" if the *distribution of labels* (PD vs. CTRL) within the subset is significantly different from the label distribution of the overall population.
-- For example, if the global population is 50% PD, a subgroup description identifying a set of cells that is 90% PD (or 90% CTRL) represents a strong biological signal.
+- We define a "Subgroup Description" as a high-order combinatorial rule (e.g., =Gene A=1 AND Gene B=0 AND Gene C=1=).
+- A subgroup is "interesting" if the distribution of disease labels (PD vs. CTRL) within the subset deviates significantly from the global population.
 
 ** Why DSSD? Optimizing Sets over Singletons
-- Standard Subgroup Discovery algorithms are greedy: they find the single "best" rule, often resulting in redundancy (many slight variations of the same rule).
-- *Diverse Subgroup Set Discovery (DSSD):* We treat the identification of cell states as a *Set Optimization Problem*.
-- Instead of scoring individual rules, we use a single holistic fitness function to evaluate a *set* of rules (a chromosome) simultaneously.
-- This function rewards the *Quality* (distinct label distribution) of individual subgroups while heavily penalizing *Overlap* between them. This forces the algorithm to find *distinct* cell states—mapping the heterogeneity of the tissue rather than just finding the largest common factor.
-
-** Our Approach: Parallel DSSD on GPUs
-- *The Search Space:* Finding these sets requires searching an astronomically large solution space ($2^{1000}$ combinations).
-- *Parallelism as an Enabler:* We combine the population-based search of Genetic Algorithms with the tensor throughput of GPUs to solve this computational bottleneck.
-- *Robust Statistics:* We use this massive power to rigorously falsify discovered neuronal states against null models, ensuring biological relevance.
+- Standard algorithms are greedy, finding many variations of the same strongest rule ("Table Mountain" redundancy).
+- *Set Optimization:* Our fitness function evaluates a *chromosome of multiple rules*. It heavily penalizes overlap, forcing the GA to find *distinct* biological mechanisms rather than just the largest one.
 
 * Methods
 ** Single-Cell Data Preprocessing
-- *Dataset:* 6,385 dopaminergic neurons from the substantia nigra (Control vs. PD).
-- *Normalization:* =SCTransform= with strict batch regression (=Sample_v2=).
-- *Input:* The top 1,000 variable genes, binarized to facilitate logical rule generation.
+- *Dataset:* 6,385 dopaminergic neurons (Control vs. PD).
+- *Input:* Top 1,000 variable genes, binarized to facilitate logical rule generation.
 
 ** The Hierarchical GPU-Accelerated Framework
-We implemented a two-tier parallel architecture on the DAWN supercomputer (Intel PVC Max Series GPUs).
+- *Tier 1 (Vectorized):* Custom PyTorch kernels run 10 independent GA populations (Pop=55) simultaneously on a single GPU using =int8= tensor broadcasting.
+- *Tier 2 (Distributed):* Scaled across 100 GPU nodes. Task 0 processed Real Data; Tasks 1-99 processed 999 Permutations.
 
-*** Tier 1: Vectorized Intra-Node Parallelism (The "10x" Kernel)
-- Inside each job, we utilized custom PyTorch kernels to run *10 independent Genetic Algorithm searches simultaneously* on a single GPU.
-- By using =torch.int8= and 5D tensor broadcasting, we evaluated 10 separate populations (Pop=55) in lockstep.
-
-*** Tier 2: Distributed Inter-Node Parallelism (The "100x" Array)
-- We scaled the search across *100 GPU nodes* via SLURM.
-- *Task 0:* Processed the Real Data + 9 Randomized Permutations.
-- *Tasks 1-99:* Processed 990 Randomized Permutations.
-- *Total Scale:* 1,000 datasets (1 Real + 999 Null) evaluated concurrently.
-
-** The Time-Bounded "Rapid-Cycle" Protocol
-- *Strategy:* Standard GAs often stagnate in local optima. To maximize exploration, we implemented a *Random Restart* strategy.
-- *Micro-Cycle Parameters:*
-  - Population Size: 55
-  - Run Length: 300 Generations.
-  - Action: At generation 300, the best individual (Set of Rules) is archived, and the population is fully re-initialized.
-- *Macro-Protocol:* This cycle repeats continuously for a strict *72-hour wall-clock limit*, ensuring deep exploration of the landscape for both real and null models.
-
-** Statistical Validation
-- *Null Hypothesis:* That the combinatorial rules found in biological neurons are no more fit than patterns found in noise given sufficient search time.
-- *The Test:* We compare the global best fitness found in the real PD neurons ($F_{real}$) against the distribution of global bests from 999 randomized datasets ($F_{perm}$), all searched with identical effort.
+** Biological Characterization (Phase 1.5)
+To interpret the "Black Box" rules found by the GA, we performed **Differential Enrichment Analysis (DEA)**:
+1.  *Internal DEA:* Compared Subgroup PD cells vs. Background PD cells to identify state-specific markers.
+2.  *External DEA:* Compared Subgroup Control cells vs. Background Control cells to test for disease specificity.
+3.  *Pathway Validation:* Enriched gene lists were validated against the Gene Ontology (GO) database using =gseapy=.
 
 * Results
-** Computational Performance
-- *Throughput:* The framework executed *7,200 Physical GPU-hours* in a single 3-day run.
-- *Search Volume:* Across 100 nodes, the system performed millions of generations and thousands of independent restarts, creating a high-confidence "noise floor."
+** Computational & Statistical Performance
+- The framework executed a deep search equivalent to ~72,000 hours of sequential computation in <36 hours.
+- *Significance:* The "Real Data" champion achieved a fitness of **0.0621**, while the maximum fitness found in 999 randomized datasets was **0.0294**.
+- *Conclusion:* The discovered structure is statistically significant ($p < 0.001$) and cannot be generated by noise.
 
-** Statistical Significance
-- *The Discovery:* The PD signature identified by our framework achieved a fitness score ($F_{real}$) that significantly exceeded the maximum score found in any randomized dataset ($p < 0.001$).
-- *Interpretation:* This confirms that the discovered neuronal subgroup is not a statistical artifact but a genuine biological phenomenon rooted in the disease pathology.
+** Biological Discovery: A Triple Dissociation of Failure Modes
+The GA identified three robust, non-overlapping subgroups representing distinct cellular states.
 
-** The Interpretable PD Signature
-- *Distinct Cell States:* The top-ranking rule set identified a non-overlapping subgroup of neurons defined by the combinatorial state of *[Gene A]* and *[Gene B]*.
-- *Biological Insight:* (Discuss whether this state represents a specific failure mode unique to PD, or a healthy metabolic state unique to Controls that is lost in the disease).
+*** 1. The Metabolic Compensation State (Rule 1)
+- *Definition:* =NCOR2=0 AND FAM19A5=0 AND MT-ND4L=1...=
+- *Enrichment:* These cells exhibit massive upregulation of Mitochondrial Complex I and IV subunits (=MT-ND4=, =MT-CO3=, =MT-ATP6=).
+- *Mechanism:* The loss of the nuclear repressor =NCOR2= appears to trigger a compensatory transcriptional program to restore ATP deficits.
+- *Validation:* Gene Ontology analysis confirmed enrichment for "Mitochondrial Respiratory Chain Complex Assembly" ($p < 10^{-20}$) and "Leber Hereditary Optic Neuropathy."
+
+*** 2. The Iron-Toxic Stress State (Rule 2)
+- *Definition:* =FTH1=1 AND RBX1=0...=
+- *Enrichment:* Defined by high Ferritin Heavy Chain (=FTH1=) and Light Chain (=FTL=). Crucially, these cells uniquely express **Alpha-Crystallin B (=CRYAB=)**, a heat-shock protein linked to alpha-synuclein aggregation protection.
+- *Mechanism:* Unlike healthy iron-rich cells, these PD cells exhibit a specific stress response (=CRYAB=, =HSP90=) indicative of iron toxicity.
+- *Validation:* GO analysis confirmed "Cytoplasmic Translation" ($p < 0.001$), reflecting the high protein synthesis demand of Ferritin sequestration.
+
+*** 3. The Fibrotic/Senescent State (Rule 4)
+- *Definition:* =PALD1=1=
+- *Enrichment:* Enriched for **=LINGO1=** (negative regulator of axonal repair) and extracellular matrix collagens (=COL27A1=, =COL5A1=).
+- *Disease Specificity:* While =PALD1+= cells exist in healthy controls (marked by =RBFOX3=), the pathological markers =LINGO1= and =COL5A1= are **exclusive to the PD population**.
+- *Mechanism:* This represents a "terminal" state where neurons have ceased repair efforts and are actively scarring the extracellular environment.
+- *Validation:* GO analysis confirmed "Extracellular Matrix Organization" ($p < 10^{-8}$) and "Regulation of Small GTPase Signaling."
 
 * Discussion
-** DSSD as a Tool for Single-Cell Neuroscience
-- We argue that DSSD is an essential tool for dissecting neurodegeneration. It bridges the gap between the resolution of scRNA-seq and the need for mechanistic understanding.
+** Deconstructing the "Mixed Bag"
+Standard analysis pools these cells together. Our results demonstrate that "PD Neurons" are not a monolith. At any given time, a neuron might be fighting a Metabolic battle (Rule 1), suffering Iron Toxicity (Rule 2), or surrendering to Senescence/Fibrosis (Rule 4).
 
-** The Necessity of "Brute-Force" Rigor
-- In high-dimensional spaces, standard p-values break down. Our approach uses massive parallelism to empirically construct the null distribution, setting a new standard for confidence in AI-driven biomedical discovery.
+** Therapeutic Implications
+- *Rule 4 (Fibrosis)* suggests that anti-LINGO1 therapies may only target a specific sub-population (the "scarred" neurons).
+- *Rule 1 (Metabolic)* suggests a distinct population that might benefit from mitochondrial co-factors, which would be ineffective for the Iron-Toxic group.
 
-** Limitations
-- Hardware dependent (requires HPC).
-- Binary discretization simplifies continuous gene expression.
-
-* Conclusion
-We have demonstrated that GPU-accelerated Parallel Genetic Algorithms can transform Diverse Subgroup Set Discovery into a practical, rigorous tool for single-cell neuroscience. By robustly identifying distinct cell states hidden within complex PD data, this framework provides a clear path from computational discovery to biological validation.
+** Conclusion
+We have demonstrated that GPU-accelerated Parallel Genetic Algorithms can transform Subgroup Discovery from a theoretical exercise into a rigorous biological tool. By robustly identifying distinct cell states hidden within complex PD data, this framework provides a clear map of the heterogeneous landscape of neurodegeneration.
