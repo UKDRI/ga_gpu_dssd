@@ -92,7 +92,7 @@ The DSSD algorithm successfully decomposed the PD population into three robust, 
 #+CAPTION: Pathway and Ontology Validation. Over-Representation Analysis (ORA) confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological mechanisms. Bars represent the negative log p-value.
 #+NAME: fig:pathway_validation
 #+ATTR_LATEX: :width 0.65\textwidth :placement [H]
-[[./images/pathway_validation_figure_clean.png]]
+[[./images/pathway_validation_figure.png]]
 
 * Discussion
 ** Beyond the "Table Mountain"
