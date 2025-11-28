@@ -83,9 +83,11 @@ We compared the DSSD subgroups to standard Leiden clustering (resolution 0.5). W
 The DSSD algorithm successfully decomposed the PD population into three robust, non-overlapping subgroups. The lack of overlap suggests these represent distinct "Attractor States" of cellular failure rather than a continuous gradient.
 
 ** Validation via Blinded Re-Discovery ("Shadow Run")
-To rigorously test the hypothesis that the three discovered states represent the exhaustive dominant signals in the dataset, we performed a "Shadow Run." We created a blinded dataset by removing all 19 genes associated with the primary rules (including /PALD1/, /FTH1/, /NCOR2/) and re-deployed the GPU framework.
+To test the robustness of the discovered states, we performed a "Shadow Run" on a blinded dataset where the 19 primary driver genes (including /PALD1/, /FTH1/, /NCOR2/, /MT-ND4/) were removed.
 
-If the dataset contained a hidden fourth mechanism (e.g., an Inflammation-driven state distinct from the Iron/Fibrosis states), the algorithm would be expected to converge on this new signal. However, the Shadow Run failed to identify any subgroup with a fitness score exceeding the permutation noise floor ($p > 0.05$). This result strongly suggests that the three described failure modes—Metabolic, Iron-Toxic, and Fibrotic—constitute the comprehensive landscape of transcriptomic heterogeneity in this cohort, rather than merely being the first of many weak signals.
+The results revealed a striking contrast in signal redundancy:
+1.  **Metabolic Redundancy:** The algorithm successfully reconstructed the **Metabolic State** (Fitness $\approx$ 0.058) by selecting alternative mitochondrial subunits (e.g., /MT-CO2/) that were not present in the exclusion list. This confirms that the metabolic signature is a robust, system-wide feature of the transcriptome ("Table Mountain" landscape).
+2.  **Fibrotic Specificity:** In contrast, the algorithm **failed** to reconstruct the broad **Fibrotic State** (previously ~1,600 cells). Without the primary /PALD1/ driver, the remaining rules fragmented into small, low-coverage niches ($N < 110$ cells). This indicates that the Fibrotic state is defined by a specific, non-redundant molecular program, validating /PALD1/ as a unique and critical marker for this phenotype.
 
 
 #+CAPTION: Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup.
