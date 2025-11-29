@@ -1,6 +1,6 @@
 #+title: GPU-Accelerated DSSD and Biological Validation Pipeline
 #+author: Sam Neaves
-#+date: <2025-11-28>
+#+date: <2025-11-29>
 #+options: toc:2 num:nil
 #+property: header-args :eval never-export
 
@@ -8,10 +8,11 @@
 
 This project implements a high-performance computational pipeline to identify and characterize heterogeneity in Parkinson's Disease (PD) using single-cell RNA-seq data.
 
-The pipeline operates in three phases:
+The pipeline operates in four phases:
 1.  **Discovery (GPU):** Uses a custom parallel Genetic Algorithm (GA) to discover "Diverse Subgroup Sets"—combinatorial rules that define distinct cell states.
 2.  **Characterization (CPU):** Performs Differential Enrichment Analysis to determine the biological context (e.g., fibrosis, metabolic stress) of the discovered states.
-3.  **Validation (GPU/CPU):** Uses "Shadow Runs" (blinded re-discovery) and external Pathway Analysis (GO/Enrichr) to prove robustness and biological relevance.
+3.  **Trajectory Inference (CPU):** Calculates transcriptomic distance from a healthy baseline to infer the chronological progression of disease states.
+4.  **Validation (GPU/CPU):** Uses "Shadow Runs" (blinded re-discovery), external Pathway Analysis (GO/Enrichr), and Clustering comparisons to prove robustness.
 
 * Phase 1: Genetic Algorithm (Subgroup Discovery)
 
@@ -45,15 +46,22 @@ We define a "Subgroup" based on the GA rule (e.g., =PALD1=1=) and compare it aga
 
 We use =gseapy= to map the differentially enriched gene lists to the **Gene Ontology (GO)** and **Jensen DISEASES** databases. This provides objective, literature-backed confirmation of the biological state (e.g., "Mitochondrial Myopathy", "Extracellular Matrix Organization").
 
-* Phase 3: The "Shadow Run" Validation
+* Phase 3: Trajectory & Orthogonality
+
+To synthesize the static states into a dynamic model:
+
+1.  **Trajectory of Failure:** We calculate the Manhattan distance of every cell in a subgroup from the "Healthy Control Centroid." Shorter distance implies an early/adaptive state; longer distance implies a terminal/divergent state.
+2.  **Orthogonality Check:** We map the discovered subgroups back onto the global UMAP (using R/Seurat) to demonstrate that these functional states cut across standard transcriptomic clusters.
+
+* Phase 4: The "Shadow Run" Validation
 
 To test for biological redundancy and "Table Mountain" landscapes, we perform a **Shadow Run**.
 
 1.  **Blinding:** We remove all genes associated with the primary discovery (e.g., PALD1, FTH1, NCOR2) from the dataset.
 2.  **Re-Discovery:** We re-submit the GPU GA on this "scorched earth" dataset.
 3.  **Inference:**
-    -   If the GA fails to find a signal -> The primary discovery is unique.
-    -   If the GA finds a new signal -> We have identified a secondary, redundant disease mechanism hidden by the primary signal.
+    -   If the GA fails to find a signal -> The primary discovery is unique (e.g., Fibrotic State).
+    -   If the GA finds a new signal -> We have identified a secondary, redundant disease mechanism hidden by the primary signal (e.g., Metabolic State).
 
 * File Descriptions
 
@@ -68,13 +76,16 @@ To test for biological redundancy and "Table Mountain" landscapes, we perform a 
 | =run_gather.slurm= | Post-processing job. Collects results and calculates p-values. |
 | =gather_results.py= | Analyzes raw results, generates Histograms and Subgroup Plots. |
 
-** Analysis & Validation Files (CPU)
+** Analysis & Visualization Files (CPU)
 
 | File | Description |
 | :--- | :--- |
 | =analyze_subgroups_full.py= | Performs Differential Enrichment Analysis for both PD and Control populations. Generates CSVs of co-expressed genes. |
 | =validate_biology.py= | Uses =gseapy= to query Gene Ontology databases for the gene lists found above. |
-| =replot.py= | Utility to generate polished publication-quality figures from text summaries. |
+| =plot_mechanism_heatmap.py= | Generates the "Double Dissociation" heatmap (Fig 3) from enrichment CSVs. |
+| =plot_pathway_validation.py= | Generates the GO Bar Chart (Fig 4) from validation CSVs. |
+| =order_cell_states.py= | Calculates transcriptomic distance from health to infer the "Trajectory of Failure" (Fig 5). |
+| =fast_plot_rule2.R= | R script to map Rule 2 cells onto the Seurat UMAP and check cluster prevalence (Fig 6). |
 
 ** Shadow Run Files (Validation)
 
@@ -92,7 +103,7 @@ To test for biological redundancy and "Table Mountain" landscapes, we perform a 
 ./simple_ga.sh ./results_prod_run --time=36:00:00
 #+end_src
 
-*Output:* =final_summary.txt= (Rules), =fitness_histogram.png= (Stats).
+*Output:* =final_summary.txt= (Rules), =fitness_histogram.png= (Stats), =subgroup_analysis.png=.
 
 ** Step 2: Characterize the Biology (Phase 1.5)
 
@@ -104,11 +115,27 @@ python3 analyze_subgroups_full.py
 
 # 2. Validate against Gene Ontology
 python3 validate_biology.py
+
+# 3. Generate Publication Figures
+python3 plot_mechanism_heatmap.py
+python3 plot_pathway_validation.py
 #+end_src
 
-*Output:* =enrichment_*.csv= and =pathway_validation_*.csv=.
+*Output:* =enrichment_*.csv=, =pathway_validation_*.csv=, =mechanism_heatmap.png=, =pathway_validation_figure.png=.
 
-** Step 3: Run the Shadow Validation
+** Step 3: Trajectory and Orthogonality
+
+#+begin_src bash
+# 1. Calculate Trajectory (Distance from Health)
+python3 order_cell_states.py
+
+# 2. Check Clustering Overlay (Requires R and Seurat Object)
+Rscript fast_plot_rule2.R
+#+end_src
+
+*Output:* =trajectory_boxplot.png=, =rule2_umap_confetti.png=.
+
+** Step 4: Run the Shadow Validation
 
 First, create the blinded dataset (removing top hits):
 
