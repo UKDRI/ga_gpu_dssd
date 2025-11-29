@@ -20,10 +20,11 @@ The pipeline operates in four phases:
 
 To find the best possible solution and ensure its statistical significance, we employ a "random-restart" strategy combined with a massive permutation test.
 
--   **The Array Job:** The =simple_ga.sh= script launches a SLURM job array of 100 tasks (Task 0 for real data, Tasks 1-99 for permuted data).
+-   **The Array Job:** The =simple_ga.sh= script launches a SLURM job
+  array of 100 tasks (Task 0 for real data and 9 permutations, Tasks 1-99 for permuted data).
 -   **The Time Budget:** Each task runs for a fixed wall-clock time (e.g., 36 hours for deep search, 10 hours for validation).
 -   **The "Random-Restart" Loop:** Inside the time window, the GA performs hundreds of independent restarts to explore the landscape globally.
--   **The Final p-value:** We compare the fitness of the "Champion" rule set found in the real data against the distribution of champions found in the 99 null (permuted) datasets.
+-   **The Final p-value:** We compare the fitness of the "Champion" rule set found in the real data against the distribution of champions found in the 999 null (permuted) datasets.
 
 ** Key GA Parameters
 
