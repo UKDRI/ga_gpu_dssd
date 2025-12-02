@@ -6,10 +6,16 @@ import os
 
 # --- CONFIGURATION ---
 # 1. The Files (Update these if your filenames differ slightly)
+#FILES = {
+#    "Rule 1\n(Metabolic)": "enrichment_Rule_1_NCOR2-___Mito_High_PD.csv",
+#    "Rule 2\n(Iron/Stress)": "enrichment_Rule_2_FTH1pos___Ferritin_High_PD.csv",
+#    "Rule 4\n(Fibrotic)": "enrichment_Rule_4_PALD1pos_Broad_PD.csv"
+#}
+##Updated files
 FILES = {
-    "Rule 1\n(Metabolic)": "enrichment_Rule_1_NCOR2-___Mito_High_PD.csv",
-    "Rule 2\n(Iron/Stress)": "enrichment_Rule_2_FTH1pos___Ferritin_High_PD.csv",
-    "Rule 4\n(Fibrotic)": "enrichment_Rule_4_PALD1pos_Broad_PD.csv"
+    "Rule 1\n(Metabolic)": "enrichment_Rule_1_Metabolic___STRICT_PD.csv",
+    "Rule 2\n(Iron/Stress)": "enrichment_Rule_2_Iron___STRICT_PD.csv",
+    "Rule 4\n(Fibrotic)": "enrichment_Rule_4_Fibrotic___STRICT_PD.csv"
 }
 
 # 2. The Genes to Highlight (The "Story")
