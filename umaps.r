@@ -57,6 +57,13 @@ rule2_barcodes <- actual_ids[rule2_mask]
 # otherwise the grey background will be misleadingly large
 seurat_subset <- subset(seurat_obj, cells = actual_ids)
 
+
+# --- NEW: KEEP ONLY PD CELLS ---
+# We assume the metadata column is named 'Disease' or 'ga_label'
+# Check your metadata names, but usually it's 'Disease' with "PD_..." values
+seurat_subset <- subset(seurat_subset, subset = Disease != "CTR")
+# -------------------------------
+
 # 5. Add Metadata
 seurat_subset$Rule2_Status <- ifelse(colnames(seurat_subset) %in% rule2_barcodes, "Iron-Toxic", "Other")
 
