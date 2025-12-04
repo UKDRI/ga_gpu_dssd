@@ -15,24 +15,23 @@
 #+LATEX_HEADER: \setlength{\parindent}{0pt}
 #+LATEX_HEADER: \setlength{\parskip}{0.8em} % Increased spacing between paragraphs
 
-% --- HIGH IMPACT TYPOGRAPHY ---
+
 #+LATEX_HEADER: \usepackage{titlesec}
 #+LATEX_HEADER: \titlespacing*{\section}{0pt}{0.6cm}{0.3cm}
 #+LATEX_HEADER: \titlespacing*{\subsection}{0pt}{0.4cm}{0.2cm}
 #+LATEX_HEADER: \titleformat{\section}{\fontsize{55}{65}\selectfont\bfseries\color{blue}}{}{0em}{}
 #+LATEX_HEADER: \titleformat{\subsection}{\fontsize{35}{42}\selectfont\bfseries\color{darkgray}}{}{0em}{}
 
-% --- CAPTIONS ---
+
 #+LATEX_HEADER: \usepackage[font={fontsize=24pt,28pt},labelfont={bf,color=blue},skip=10pt]{caption}
 #+LATEX_HEADER: \setlength{\columnsep}{4cm}
 
 #+BEGIN_EXPORT latex
 % --- TITLE HEADER ---
 \begin{center}
-{\fontsize{85}{100}\selectfont \textbf{Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework Identifies Distinct Metabolic, Fibrotic, and Iron-Toxic States}}\\[1cm]
-{\fontsize{45}{55}\selectfont \textbf{Sam Neaves} -- UK Dementia Research Institute (UK DRI), Cardiff University}
+
 \end{center}
-\vspace{1.5cm}
+
 
 % --- START COLUMNS ---
 \begin{multicols}{2}
