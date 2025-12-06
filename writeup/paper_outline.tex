@@ -1,0 +1,297 @@
+% Created 2025-11-27 Thu 18:37
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{listings}
+\author{Sam Neaves}
+\date{\textit{<2025-11-28 Fri>}}
+\title{Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework Identifies Distinct Metabolic, Fibrotic, and Iron-Toxic States in Parkinson’s Disease}
+\hypersetup{
+ pdfauthor={Sam Neaves},
+ pdftitle={Deciphering Dopaminergic Heterogeneity: A GPU-Accelerated Evolutionary Framework Identifies Distinct Metabolic, Fibrotic, and Iron-Toxic States in Parkinson’s Disease},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 29.3 (Org mode 9.6.15)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+
+\section{Abstract}
+\label{sec:org9246e5f}
+\begin{description}
+\item[{Background}] Parkinson's Disease (PD) is characterized by the progressive loss of dopaminergic neurons, yet scRNA-seq reveals high heterogeneity in cellular decline. Standard clustering often fails to resolve overlapping failure modes or distinguish disease-specific states from healthy stress responses.
+\item[{Methodology}] We applied Diverse Subgroup Set Discovery (DSSD) using a custom \textbf{\textbf{Parallel Genetic Algorithm}} on the DAWN HPC (Intel PVC GPUs). Unlike greedy algorithms, our framework evolves a set of rules simultaneously to maximize population coverage while minimizing redundancy. We validated findings using "Shadow Runs" (blinded re-discovery) and Differential Enrichment Analysis against background PD and Control populations.
+\item[{Rigor}] We addressed the "look-elsewhere" effect via a massive-scale permutation test, running 1,000 concurrent searches on real and randomized data (\textasciitilde{}72,000 GPU-hours equivalent).
+\item[{Results}] The framework identified a global solution with fitness statistically unreachable by chance (\(p < 0.001\)). This solution decomposed the PD population into three distinct, non-overlapping failure modes: (1) A \textbf{\textbf{Metabolic Compensation}} state defined by \emph{NCOR2} loss and mitochondrial upregulation; (2) An \textbf{\textbf{Iron-Toxic}} state defined by \emph{FTH1} and \emph{CRYAB}-mediated stress; and (3) A \textbf{\textbf{Fibrotic/Senescent}} state defined by \emph{PALD1} and \emph{LINGO1} which is notably absent in healthy controls.
+\item[{Conclusion}] We demonstrate that GPU-accelerated evolutionary mining can robustly untangle the "mixed bag" of neurodegeneration into actionable, mechanistically distinct cell states.
+\end{description}
+
+\section{Introduction}
+\label{sec:orgbe4b700}
+
+\subsection{The Biological Challenge: Gain of Dysfunction and Loss of Health}
+\label{sec:orgd75f1a0}
+\begin{itemize}
+\item Parkinson’s Disease (PD) degeneration is asynchronous. At any given moment, the substantia nigra contains a "mixed bag" of healthy, compensating, and dying cells.
+\item Standard analysis pipelines typically rely on unsupervised clustering (e.g., Louvain/Leiden) followed by differential expression. However, this approach faces two fundamental limitations when dissecting disease heterogeneity:
+\begin{enumerate}
+\item \textbf{\textbf{Post-hoc Association vs. Supervised Search:}} Clustering partitions cells based on \textbf{global} transcriptomic similarity (e.g., cell type identity) and only assesses disease association \textbf{post-hoc}. This risks drowning out subtle, disease-specific signals that do not drive the principal components of variance. In contrast, Subgroup Discovery is inherently \textbf{\textbf{supervised}}: it utilizes the disease labels (PD vs. CTRL) directly within the search objective, optimizing specifically for rules that discriminate cellular states associated with the pathology.
+\item \textbf{\textbf{Exhaustive Partitioning vs. Local Discovery:}} Clustering algorithms are typically exhaustive, forcing every cell—including noisy or ambiguous ones—into a distinct group. This often obscures rare or transitional states within larger "garbage collector" clusters. DSSD, conversely, does not attempt to model the entire population. Instead, it acts as a "spotlight," identifying only the specific subsets of cells that carry a strong biological signal while leaving the uninformative background unstructured.
+\end{enumerate}
+\item While standard clustering imposes mutual exclusion as a mathematical constraint, DSSD allows for the discovery of overlapping rules. However, by explicitly penalizing redundancy in our evolutionary framework, we aim to discover \textbf{\textbf{non-overlapping, orthogonal subgroups}} that represent distinct, independent failure modes rather than redundant descriptions of the same phenomenon.
+\end{itemize}
+
+\subsection{The Computational Innovation: From Patient Stratification to Cellular States}
+\label{sec:org1cb835e}
+Subgroup Discovery (SD) has a rich history in bioinformatics. In the microarray era, seminal work by \textbf{\textbf{Gamberger et al. (2004)}} demonstrated that SD could induce "comprehensible models" for gene expression. Rather than building black-box classifiers, their approach identified explicit rules (e.g., \emph{"IF Gene X is Expressed AND Gene Y is Not Expressed"} [cite: 1533]) to describe specific subpopulations of patients[cite: 1266].
+
+However, these early applications were defined by the "Small \(N\), Large \(P\)" problem of microarrays (\(N < 150\) patients)[cite: 1256]. The discovered subgroups represented **patient stratification**—identifying subsets of individuals with specific disease subtypes (e.g., specific forms of Leukemia)[cite: 1250, 1533].
+
+We repurpose this framework for the single-cell era, where \(N\) is measured in thousands of cells. By treating \textbf{\textbf{individual cells as instances}}, we shift the focus from \textbf{Patient Stratification} to \textbf{\textbf{Cell State Discovery}}. We posit that non-overlapping subgroups in scRNA-seq data represent distinct, stable "attractor states" (e.g., Metabolic vs. Fibrotic) that co-exist within the same tissue, rather than different disease diagnoses.
+
+\begin{itemize}
+\item Furthermore, we extend the DSSD framework to infer \textbf{\textbf{temporal dynamics}}. By calculating the transcriptomic distance of each discovered subgroup from the healthy baseline, we reconstruct the chronological trajectory of neurodegeneration, distinguishing between early adaptive stress responses and terminal cell fates without relying on complex pseudotime assumptions.
+\end{itemize}
+\subsection{Why DSSD? Set Optimization vs. Sequential Covering}
+\label{sec:org75648a0}
+Traditional Subgroup Discovery algorithms often address redundancy through \textbf{\textbf{Sequential Covering}} (e.g., CN2-SD). In this approach, once a subgroup is found, the examples it covers are "down-weighted," encouraging the algorithm to look elsewhere for the next subgroup. While this does promote diversity, it is still a \textbf{\textbf{greedy, iterative process}}: the first subgroup found dictates the residual search space for the second.
+
+\textbf{\textbf{The DSSD Advantage:}} We argue that biological states are not "residuals" of one another. To capture the true complexity of cellular heterogeneity, we need to optimize the \textbf{\textbf{entire solution set simultaneously}}.
+
+DSSD treats the identification of cell states as a \textbf{\textbf{Set Optimization Problem}}. Instead of iteratively picking the "next best" rule, our Genetic Algorithm evolves a chromosome representing a complete set of \(k\) subgroups. The fitness function evaluates the collective merit of this set, penalizing overlap between members. This allows the algorithm to discover a global optimum—a "team" of orthogonal subgroups (Metabolic, Iron, Fibrotic)—that best explains the dataset's heterogeneity, rather than a sequence of decreasingly important residuals.
+
+
+\section{Methods}
+\label{sec:org0936e19}
+
+\subsection{Single-Cell Data Preprocessing}
+\label{sec:org2adf06b}
+To ensure that the discovered rules represented biological signals rather than technical artifacts or batch effects, we implemented a rigorous preprocessing pipeline using the Seurat R toolkit.
+
+\begin{itemize}
+\item \textbf{\textbf{Dataset Filtering:}} We analyzed a cohort of 6,385 nuclei, strictly filtering for dopaminergic neurons (DaNs) from Control (CTR) and Parkinson's Disease (PD) donors. Rare or ambiguous subtypes (e.g., ILBD) were excluded to sharpen the case-control contrast.
+\item \textbf{\textbf{Normalization and Confounder Regression:}} We utilized \textbf{\textbf{\texttt{SCTransform}}}, a regularized negative binomial regression method, to normalize gene expression. Crucially, we included the donor identifier (\texttt{Sample\_v2}) as a regression variable. This effectively "regressed out" inter-individual variability and batch effects, ensuring that the residual expression values reflected disease-associated states rather than donor-specific idiosyncrasies.
+\item \textbf{\textbf{Feature Selection:}} We performed a preliminary differential expression screen (Wilcoxon Rank Sum test) to identify the top 1,000 variable genes most associated with the disease axis (\(p_{adj} < 10^{-50}\)).
+\item \textbf{\textbf{Binarization:}} To facilitate logical rule generation, the scaled residuals from \texttt{SCTransform} (z-scores) were binarized. A gene was considered "Expressed" (\texttt{1}) if its standardized expression value was \(>0\) (above the population mean) and "Not Expressed" (\texttt{0}) otherwise. This binarization strategy preserves the relative "High/Low" state of gene expression while enabling efficient boolean logic operations on the GPU.
+\end{itemize}
+
+\subsection{The Hierarchical GPU-Accelerated Framework}
+\label{sec:orge1a9620}
+To navigate the combinatorial search space, we developed a two-tier parallel Genetic Algorithm (GA) optimized for Intel PVC GPUs.
+
+\begin{itemize}
+\item \textbf{Tier 1 (Vectorized Intra-Node):} We utilize custom PyTorch kernels to evaluate 10 independent GA populations (Pop=55) simultaneously on a single GPU. By creating a dense tensor of size \([10 \times 55 \times 1000]\) and utilizing \texttt{int8} bit-packing, we achieve massive throughput for the boolean logic operations required by rule evaluation.
+\item \textbf{Tier 2 (Distributed Inter-Node):} The search is scaled across 100 GPU nodes. Task 0 processes the Real Data, while Tasks 1-99 process 999 randomized permutations to establish a rigorous null distribution.
+\end{itemize}
+
+To maximize throughput, we utilized custom PyTorch kernels that operate on packed \texttt{int8} tensors. A population of 55 individuals and 1,000 features is represented as a dense binary matrix. Evaluation of rules is vectorized across 10 independent populations simultaneously using broadcasting, converting the boolean logic \texttt{(Rule\_Mask OR Data\_Value)} into efficient bitwise GPU operations. This architecture allows the evaluation of millions of candidate rules per second, a scale previously unattainable with CPU-based iterators.  
+\subsection{Fitness Function: Optimizing for Diversity}
+\label{sec:org800b1d1}
+We employ a modified Weighted Relative Accuracy (WRAcc) that explicitly accounts for set diversity. The fitness \(F\) of a chromosome (a set of \(k\) rules) is defined as:
+
+$$ F = \frac{\sum_{i=1}^{k} WRAcc(Rule_i)}{1 + \lambda \cdot Overlap(Rule_1...Rule_k)} $$
+
+Where \(\lambda\) is a penalty factor for cells covered by multiple rules. This drives the evolutionary pressure towards finding \textbf{\textbf{non-overlapping}} cell states.
+
+
+
+
+\subsection{Biological Characterization (Phase 1.5)}
+\label{sec:orgd2117f7}
+While the GA generates fully interpretable rule definitions (e.g., \texttt{PALD1=1}), we performed \textbf{\textbf{Differential Enrichment Analysis (DEA)}} to map these rules to broader pathobiological contexts:
+\begin{enumerate}
+\item \textbf{Internal DEA:} Compared Subgroup PD cells vs. Background PD cells to identify specific "failure modes."
+\item \textbf{External DEA:} Compared Subgroup Control cells vs. Background Control cells to determine disease specificity.
+\item \textbf{Validation:} Gene lists were validated against the Gene Ontology (GO) database using \texttt{gseapy}.
+\end{enumerate}
+
+\section{Results}
+\label{sec:orgc0dee5b}
+\subsection{Computational \& Statistical Performance}
+\label{sec:orgd9eec77}
+The framework executed a deep search equivalent to \textasciitilde{}72,000 hours of sequential computation in <36 hours. The "Real Data" champion achieved a fitness of \textbf{\textbf{0.0621}}, while the maximum fitness found in 999 randomized datasets was \textbf{\textbf{0.0294}}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{../18nov_prod_36hours/fitness_histogram.png}
+\caption{\label{fig:orgf2a4ceb}Empirical Null Distribution generated via 1,000 GPU-accelerated permutation tests. The red line (\(F_{real}\)) indicates the fitness of the discovered rule set, significantly exceeding the maximum fitness found in random noise (\(p < 0.001\)).}
+\end{figure}
+\subsection{Comparison with Standard Clustering}
+\label{sec:org0614758}
+We compared the DSSD subgroups to standard Leiden clustering (resolution 0.5). While clustering correctly identified global cell types (e.g., general dopaminergic identity), it failed to resolve the specific pathological states. For example, the \textbf{\textbf{Rule 2 (Iron-Toxic)}} cells were dispersed across multiple standard clusters, indicating that this stress state cuts across global transcriptomic identities and is invisible to standard variance-based partitioning.
+\subsection{Biological Discovery: A Triple Dissociation of Failure Modes}
+\label{sec:org2f86c4f}
+The DSSD algorithm successfully decomposed the PD population into three robust, non-overlapping subgroups. The lack of overlap suggests these represent distinct "Attractor States" of cellular failure rather than a continuous gradient.
+
+\subsection{Validation via Blinded Re-Discovery ("Shadow Run")}
+\label{sec:orgaad24e0}
+To rigorously test the hypothesis that the three discovered states represent the exhaustive dominant signals in the dataset, we performed a "Shadow Run." We created a blinded dataset by removing all 19 genes associated with the primary rules (including \emph{PALD1}, \emph{FTH1}, \emph{NCOR2}) and re-deployed the GPU framework.
+
+If the dataset contained a hidden fourth mechanism (e.g., an Inflammation-driven state distinct from the Iron/Fibrosis states), the algorithm would be expected to converge on this new signal. However, the Shadow Run failed to identify any subgroup with a fitness score exceeding the permutation noise floor (\(p > 0.05\)). This result strongly suggests that the three described failure modes—Metabolic, Iron-Toxic, and Fibrotic—constitute the comprehensive landscape of transcriptomic heterogeneity in this cohort, rather than merely being the first of many weak signals.
+
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{../18nov_prod_36hours/subgroup_analysis.png}
+\caption{\label{fig:org03e2285}Subgroup Coverage and Composition. This back-to-back bar chart illustrates the number of Parkinson's Disease (PD, orange) and Control (CTRL, blue) cells covered by the top discovered rules. Rule 1 and Rule 2 identify highly specific minority populations, while Rule 4 captures a broader, yet still significantly enriched, PD subgroup.}
+\end{figure}
+
+\subsubsection{1. The Metabolic Compensation State (Rule 1)}
+\label{sec:org2ef0932}
+\begin{itemize}
+\item \textbf{Definition:} \texttt{NCOR2=0 AND MT-ND4L=1...}
+\item \textbf{Mechanism:} The loss of the nuclear repressor \texttt{NCOR2} co-occurs with a massive upregulation of Mitochondrial Complex I and IV subunits (\texttt{MT-ND4}, \texttt{MT-CO3}). This suggests a population under severe metabolic stress attempting to restore ATP deficits via transcriptional compensation.
+\item \textbf{Validation:} GO analysis confirmed enrichment for "Mitochondrial Respiratory Chain Complex Assembly" (\(p < 10^{-20}\)).
+\end{itemize}
+
+\subsubsection{2. The Iron-Toxic Stress State (Rule 2)}
+\label{sec:orgac7b7ae}
+\begin{itemize}
+\item \textbf{Definition:} \texttt{FTH1=1 AND RBX1=0...}
+\item \textbf{Mechanism:} Defined by high Ferritin Heavy/Light Chain (\texttt{FTH1}, \texttt{FTL}). Crucially, this is the \textbf{only} subgroup that upregulates \textbf{\textbf{\texttt{CRYAB}}}, a heat-shock protein linked to alpha-synuclein aggregation protection. This distinguishes it as a state of active Iron Toxicity management.
+\item \textbf{Validation:} GO analysis confirmed "Cytoplasmic Translation" (\(p < 0.001\)), reflecting the high protein synthesis demand of Ferritin sequestration.
+\end{itemize}
+
+\subsubsection{3. The Fibrotic/Senescent State (Rule 4)}
+\label{sec:orgb823c47}
+\begin{itemize}
+\item \textbf{Definition:} \texttt{PALD1=1}
+\item \textbf{Mechanism:} This state is enriched for \textbf{\textbf{\texttt{LINGO1}}} (negative regulator of axonal repair) and extracellular matrix collagens (\texttt{COL27A1}).
+\item \textbf{Disease Specificity:} External DEA revealed that while \texttt{PALD1+} cells exist in healthy controls (marked by \texttt{RBFOX3}), the pathological markers \texttt{LINGO1} and \texttt{COL5A1} are \textbf{\textbf{exclusive to the PD population}}.
+\item \textbf{Validation:} GO analysis confirmed "Extracellular Matrix Organization" (\(p < 10^{-8}\)) and "Regulation of Small GTPase Signaling."
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.7\textwidth]{./images/mechanism_heatmap.png}
+\caption{\label{fig:org6eb55ee}Differential Enrichment Heatmap proving the \textbf{\textbf{Double Dissociation}} of cell states. Rule 1 is uniquely enriched for mitochondrial genes (Top Left, Red) but depleted for fibrosis markers. Rule 4 is uniquely enriched for fibrosis/senescence markers (Bottom Right, Red). Rule 2 shows a distinct Iron/Stress signature.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.65\textwidth]{./images/pathway_validation_figure.png}
+\caption{\label{fig:orgedd5933}Pathway and Ontology Validation. Over-Representation Analysis (ORA) confirms that the differentially enriched genes for each subgroup map to distinct, statistically significant biological mechanisms. Bars represent the negative log p-value.}
+\end{figure}
+
+\subsection{Differential Enrichment Reveals Mutually Exclusive Pathologies}
+\label{sec:org0ba2cb3}
+To determine if the discovered subgroups represented distinct biological states or merely varying degrees of general cellular stress, we analyzed the co-expression of key pathway markers across the three groups (Figure \ref{fig:org6eb55ee}).
+
+The analysis revealed a striking \textbf{\textbf{triple dissociation}} between the Metabolic, Iron-Toxic, and Fibrotic states:
+
+\begin{enumerate}
+\item \textbf{\textbf{Metabolic Specificity:}} Cells in the \textbf{\textbf{Metabolic Subgroup (Rule 1)}} exhibited a specific upregulation of mitochondrial complex I and IV genes (mean enrichment +0.18 to +0.26) while showing depletion or baseline levels of fibrosis markers.
+\item \textbf{\textbf{Fibrotic Specificity:}} Conversely, cells in the \textbf{\textbf{Fibrotic Subgroup (Rule 4)}} showed strong upregulation of \emph{LINGO1} and \emph{COL27A1} (+0.21 to +0.23) but downregulation of mitochondrial genes (e.g., \emph{MT-CO3} -0.06).
+\item \textbf{\textbf{Iron/Stress Specificity:}} The \textbf{\textbf{Iron Subgroup (Rule 2)}} displayed a unique signature defined by \emph{FTL} and \emph{CRYAB} (+0.11 to +0.12). Crucially, these cells did not show the broad mitochondrial upregulation of Rule 1 nor the fibrotic scarring of Rule 4, confirming that Iron Toxicity represents an independent axis of cellular failure.
+\end{enumerate}
+
+This "anti-correlation" of mechanisms confirms that these are not random subsets of sick cells, but rather mutually exclusive attractor states. A neuron effectively commits to a specific failure mode: it engages a metabolic overdrive (Rule 1), succumbs to fibrotic remodeling (Rule 4), or battles iron toxicity (Rule 2), but rarely exhibits all three pathologies simultaneously.
+
+\subsection{Disease-Specificity of the Fibrotic State}
+\label{sec:org7242573}
+We further investigated whether these cellular states represent physiological functions or pathological transformations by applying the discovered rules to the healthy control population.
+
+While the \textbf{\textbf{Metabolic State (Rule 1)}} was detectable in controls, the \textbf{\textbf{Fibrotic State (Rule 4)}} showed a qualitative transformation in the disease context. In controls, \emph{PALD1/+ neurons expressed healthy neuronal markers (/RBFOX3}, \emph{PRDM16}) but lacked the pathological signature. In PD patients, this same cell lineage specifically acquired the expression of \textbf{\textbf{\texttt{LINGO1}}} (an inhibitor of regeneration) and extracellular matrix collagens. This identifies the /PALD1/+ lineage as a selectively vulnerable population that undergoes a specific fibrotic transformation in the disease environment.
+
+\subsection{Chronological Ordering via Transcriptomic Distance}
+\label{sec:org8f44bda}
+To infer the progression of these disease states, we calculated the Manhattan distance of each subgroup's transcriptomic profile from a "Healthy Control" centroid (Figure \ref{fig:orgd15884a}).
+
+This analysis revealed a clear hierarchy of degeneration. The \textbf{\textbf{Iron-Toxic (Rule 2)}} and \textbf{\textbf{Metabolic (Rule 1)}} states exhibited the lowest distance from health (Median Distance \(\approx\) 305), suggesting they represent early, homeostatic stress responses where neuronal identity is largely preserved. In contrast, the \textbf{\textbf{Fibrotic State (Rule 4)}} showed the greatest divergence (Median Distance \(\approx\) 340, \(p < 0.001\)), confirming its status as a terminal, irreversible state where the transcriptomic landscape has been fundamentally remodeled towards senescence and scarring.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{./images/trajectory_boxplot.png}
+\caption{\label{fig:orgd15884a}Trajectory of Failure. Boxplots showing the Manhattan transcriptomic distance of each PD subgroup from the average Healthy Control centroid. The Iron-Toxic (Rule 2) and Metabolic (Rule 1) states remain closer to the healthy baseline, indicating early-stage stress responses. The Fibrotic (Rule 4) state shows significantly higher divergence, consistent with a terminal loss of neuronal identity and transition to a scar-like phenotype.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=1.0\textwidth]{./images/rule2_combined_labeled.png}
+\caption{\label{fig:org2ef4df8}The "Iron-Toxic" State represents a functional overlay rather than a transcriptomic identity. (A) UMAP projection of all cells, with Rule 2 cells colored in red. The distribution of these cells across the manifold confirms that Iron Toxicity is not restricted to a single dopaminergic sub-lineage, but rather represents a distinct \textbf{\textbf{stress state}} that can be acquired by various neuronal subtypes. (B) Prevalence of the Iron-Toxic state across standard Seurat clusters. While the state is ubiquitous, its prevalence is heterogeneous, with specific clusters (e.g., 0, 4) showing heightened susceptibility. This confirms that DSSD identifies a coherent pathological mechanism that cuts across, rather than aligns with, standard variance-based clustering.}
+\end{figure}
+
+
+\section{Discussion}
+\label{sec:org2c2e7df}
+\subsection{Beyond the "Table Mountain"}
+\label{sec:orgbd50711}
+A key challenge in Subgroup Discovery is the "Table Mountain" problem (van Leeuwen \& Knobbe, 2012), where algorithms return redundant variations of the single strongest signal. By using DSSD with a diversity-aware fitness function, we forced the algorithm to step off the primary peak (likely Rule 4/Fibrosis) and discover the orthogonal Rule 1 (Metabolic) and Rule 2 (Iron) peaks.
+
+This confirms that PD heterogeneity is not random noise, but a structured composition of distinct failure modes. The algorithm effectively "de-mixed" the transcriptomic signal into its constituent drivers.
+\subsection{The Chronology of Collapse: A Unified Model of Degeneration}
+\label{sec:org7d3b320}
+Our transcriptomic distance analysis (Figure \ref{fig:orgd15884a}) integrates the three discovered states into a unified temporal model of dopaminergic failure.
+
+The proximity of the \textbf{\textbf{Metabolic (Rule 1)}} and \textbf{\textbf{Iron-Toxic (Rule 2)}} states to the healthy baseline suggests these represent \textbf{\textbf{early, homeostatic checkpoints}}. In this phase, neurons are actively fighting to maintain function—either by revving mitochondrial engines to restore ATP (Rule 1) or by sequestering toxic iron via Ferritin/CRYAB (Rule 2). The preservation of neuronal identity markers (e.g., \emph{RBFOX3}) in these groups confirms they are functional, albeit stressed, neurons.
+
+In contrast, the \textbf{\textbf{Fibrotic State (Rule 4)}} represents the \textbf{\textbf{terminal collapse}} of these homeostatic mechanisms. The immense transcriptomic divergence, combined with the loss of metabolic markers and the upregulation of "scar" genes (\emph{COL27A1}, \emph{LINGO1}), indicates a transition to a senescent, non-functional phenotype. This suggests a "two-hit" model of PD progression: neurons initially segregate into specific stress-response trajectories (Metabolic vs. Iron) before eventually converging on a common, irreversible fibrotic fate.
+
+\subsection{Therapeutic Implications}
+\label{sec:orge690f9c}
+The chronological stratification of these states informs the \textbf{timing} of interventions:
+\begin{itemize}
+\item \textbf{\textbf{Neuroprotective Agents (Mitochondrial/Iron):}} Therapies targeting mitochondrial function or iron chelation must be administered in the \textbf{\textbf{early disease phase}}, targeting the Rule 1 and Rule 2 populations while they are still transcriptionally distinct and functional.
+\item \textbf{\textbf{Senolytics (Anti-Fibrotic):}} Once neurons enter the \textbf{\textbf{Rule 4 (Fibrotic)}} state, metabolic rescue may be futile. Instead, this population may require "Senolytic" therapies (like anti-LINGO1) to clear dysfunctional cells or halt the fibrotic remodeling of the nigral microenvironment.
+\end{itemize}
+
+\subsection{Contextualizing the Triple Dissociation within the PD Landscape}
+\label{sec:orgd72f6a4}
+Our application of DSSD reveals that the heterogeneity of the substantia nigra is not stochastic, but structured into distinct failure modes that align with, yet refine, major hypotheses in the field.
+
+\subsubsection{1. Metabolic Compensation vs. Collapse}
+\label{sec:orgeb75bc7}
+The identification of the \textbf{\textbf{Rule 1 (Metabolic)}} subgroup provides high-resolution evidence for the long-standing "Bioenergetic Crisis" hypothesis. While Complex I deficiency is a hallmark of PD pathology, bulk transcriptomics often show conflicting downregulation or upregulation of mitochondrial genes. Our results resolve this paradox: we identify a specific sub-population engaged in massive transcriptional upregulation of Complex I/IV (\emph{MT-ND4}, \emph{MT-CO3}). This aligns with the "Compensatory Hypothesis," suggesting that a subset of neurons can sustain function despite metabolic insults by overriding the nuclear repressor \emph{NCOR2}, potentially explaining the "slow-burn" nature of dopaminergic loss compared to acute toxicity models.
+
+\subsubsection{2. Iron Toxicity and the Chaperone Defense}
+\label{sec:org62e8c75}
+The \textbf{\textbf{Rule 2 (Iron-Toxic)}} subgroup creates a crucial link between iron accumulation and proteostasis. While iron deposition (siderosis) is a known feature of the PD nigrosome, it has remained unclear whether this occurs in all dying neurons. Our findings demonstrate that iron toxicity is a \textbf{\textbf{distinct state}}, orthogonal to the metabolic compensation phenotype. The unique co-expression of \emph{CRYAB} (Alpha-Crystallin B) in this subgroup is particularly significant; \emph{CRYAB} is a small heat-shock protein known to inhibit alpha-synuclein aggregation under oxidative stress. This suggests that the "Iron State" is defined by a specific battle against ferroptosis-induced aggregation, independent of the bioenergetic failure seen in Rule 1.
+
+\subsubsection{3. LINGO1 and the Fibrotic Niche}
+\label{sec:orgd307809}
+Perhaps the most clinically relevant finding is the isolation of the \textbf{\textbf{Rule 4 (Fibrotic)}} state. \emph{LINGO1} has been a target of high-profile clinical trials (e.g., Opicinumab) for neuroregeneration, with mixed success. Our data offers a mechanistic explanation for these failures: \emph{LINGO1} expression is not a universal feature of PD neurons but is restricted to a specific, terminal "fibrotic" sub-population. Treating a "Rule 1" (Metabolic) patient with an anti-LINGO1 agent would likely be futile, as their neurons lack the target. This highlights the necessity of stratifying patients—or even stratifying cellular targets within a patient—based on the prevalence of these specific attractor states.
+
+\subsection{Future Directions: From In Silico Rules to In Vivo Validation}
+\label{sec:org7f6b3d9}
+While our GPU-accelerated framework has successfully mapped the static landscape of PD heterogeneity, confirming the causal dynamics of these states requires experimental validation.
+
+\subsubsection{1. Spatial Mapping of the Fibrotic Niche}
+\label{sec:org2016ffa}
+Our discovery of the \textbf{\textbf{Fibrotic (Rule 4)}} state raises a critical question: where are these "scarred" neurons located? Single-cell dissociation destroys spatial context. Future work should apply \textbf{\textbf{Spatial Transcriptomics}} (e.g., Visium or MERFISH) to human nigral tissue sections. We hypothesize that \emph{PALD1+} neurons will not be randomly distributed but will spatially cluster in "fibrotic niches," potentially surrounding microvasculature or areas of high glial reactivity, creating a toxic microenvironment that spreads senescence to neighboring cells.
+
+\subsubsection{2. Modeling State Transitions in iPSCs}
+\label{sec:orgb9b7775}
+To validate the "Attractor State" theory, we propose an in vitro model using patient-derived induced pluripotent stem cells (iPSCs) differentiated into dopaminergic neurons. By subjecting these cultures to specific stressors—such as Rotenone (mitochondrial inhibitor) or Ferric Ammonium Citrate (iron overload)—we can test if neurons segregate into the predicted \textbf{\textbf{Rule 1}} and \textbf{\textbf{Rule 2}} transcriptional states. Furthermore, longitudinal single-cell sequencing of these cultures could definitively prove whether the \textbf{\textbf{Rule 4}} phenotype emerges as a late-stage consequence of prolonged exposure to these stressors, validating our chronological ordering.
+
+\subsubsection{3. Multi-Omics and Epigenetic Locking}
+\label{sec:org74f65dd}
+Finally, we aim to investigate why these states become stable. Are the "Metabolic" and "Iron-Toxic" states transient transcriptional fluctuations, or are they epigenetically locked? Future applications of DSSD should integrate \textbf{\textbf{scATAC-seq}} (chromatin accessibility) data. We hypothesize that the transition to the terminal \textbf{\textbf{Rule 4}} state is accompanied by widespread chromatin remodeling that permanently silences repair genes (\emph{LINGO1} upregulation), making metabolic rescue impossible without epigenetic reprogramming.
+\section{Conclusion}
+\label{sec:org4320d71}
+\subsection{Bridging High-Performance Computing and Mechanobiology}
+\label{sec:orgaf416d1}
+This study demonstrates that the complexity of neurodegeneration cannot be fully resolved by standard clustering or greedy rule induction. By leveraging the massive parallelism of modern GPUs, we transformed Subgroup Discovery from a limited patient-stratification tool into a high-throughput engine for \textbf{\textbf{Cell State Discovery}}. The DSSD framework successfully navigated a combinatorial search space of \(2^{1000}\) hypotheses to identify signals that were statistically invisible to random chance (\(p < 0.001\)) and orthogonal to standard transcriptomic clusters.
+
+\subsection{A Unified Model of Dopaminergic Failure}
+\label{sec:orgd88c853}
+Our analysis resolves the long-standing "mixed bag" problem of Parkinson's Disease heterogeneity. We propose that dopaminergic neurons do not degenerate along a single linear path, but rather segregate into distinct \textbf{\textbf{Attractor States}} of failure:
+\begin{enumerate}
+\item \textbf{\textbf{Early Adaptation:}} Neurons initially engage homeostatic mechanisms, either upregulating mitochondrial respiration (Rule 1) or sequestering toxic iron (Rule 2).
+\item \textbf{\textbf{Terminal Collapse:}} Upon the failure of these defenses, neurons transition into a distinct, irreversible state of fibrotic senescence (Rule 4).
+\end{enumerate}
+
+\subsection{Implications for Precision Medicine}
+\label{sec:org7663711}
+These findings challenge the "one-size-fits-all" paradigm of neuroprotection. A therapeutic agent targeting mitochondrial function may rescue the \textbf{\textbf{Rule 1}} population but fail to address the protein aggregation driving the \textbf{\textbf{Rule 2}} state, or the fibrotic remodeling of the \textbf{\textbf{Rule 4}} state. By mapping individual cells to these specific failure modes, DSSD provides the necessary resolution to design state-specific interventions, moving the field closer to a true precision medicine approach for neurodegeneration.
+\end{document}

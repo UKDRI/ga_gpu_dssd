@@ -1,0 +1,205 @@
+% Created 2025-12-04 Thu 13:06
+% Intended LaTeX compiler: pdflatex
+\documentclass[a0paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage[margin=1.5cm, top=1.5cm, bottom=1.5cm]{geometry}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.2em} % Increased slightly to fill space
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{0.4cm}{0.2cm}
+\titlespacing*{\subsection}{0pt}{0.2cm}{0.1cm}
+\titleformat{\section}{\fontsize{50}{60}\selectfont\bfseries\color{blue}}{}{0em}{}
+\titleformat{\subsection}{\fontsize{32}{40}\selectfont\bfseries\color{darkgray}}{}{0em}{}
+\usepackage{caption}
+\DeclareCaptionFont{posterfont}{\fontsize{28}{34}\selectfont}
+\captionsetup{font={posterfont},labelfont={bf,color=blue},skip=12pt}
+\setlength{\columnsep}{2.5cm}
+\date{}
+\title{Poster Content}
+\hypersetup{
+ pdfauthor={Sam Neaves},
+ pdftitle={Poster Content},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 29.3 (Org mode 9.6.15)}, 
+ pdflang={English}}
+\begin{document}
+
+% START TWO COLUMN LAYOUT
+\begin{multicols}{2}
+\fontsize{28}{34}\selectfont % Slightly larger body text since you have room
+
+\section*{1. The Challenge: The "Mixed Bag"}
+\label{sec:org3b749d1}
+Standard clustering groups cells by Global Transcriptomic Identity,
+forcing cells into mutually exclusive groups. By ignoring the disease
+label of individual cells, this approach obscures specific functional
+failure modes that cut across neuronal subtypes.
+
+
+\textbf{\textbf{Objective:}} To use GPU-accelerated Subgroup Discovery to find \textbf{\textbf{robust combinatorial rules}} that define these hidden states without prior biological assumptions.
+
+\section*{2. The Solution: GPU-Accelerated Discovery}
+\label{sec:orge21e088}
+To ensure robust biological signals, single-cell expression data was
+\textbf{\textbf{Z-scored}}, \textbf{\textbf{donor-regressed}}, and \textbf{\textbf{discretized}}. To tackle
+complexity, we developed a custom \textbf{\textbf{Parallel Genetic Algorithm}} to
+perform Diverse Subgroup Set Discovery (DSSD) on GPU architecture:
+
+\begin{itemize}
+\item \textbf{\textbf{Glass-Box AI:}} Evolves human-readable logical rules (e.g., \emph{IF Gene A AND NOT Gene B}).
+\item \textbf{\textbf{Set Optimization:}} Optimizes a \textbf{portfolio} of rules simultaneously, penalizing overlap.
+\item \textbf{\textbf{High-Throughput:}} Leveraged \textbf{\textbf{\textasciitilde{}10,000 GPU hours}} on the \textbf{\textbf{DAWN AI Supercomputer}} to perform massive parallel permutation testing, ensuring rigorous statistical validation.
+\end{itemize}
+
+% --- FIGURE 1: METHOD & VALIDATION (Side-by-Side) ---
+\begin{center}
+    \begin{minipage}{0.58\linewidth}
+        % The Method Diagram
+        \includegraphics[width=\linewidth,height=12cm,keepaspectratio]{./images/GPU_GA.pdf}
+        \captionof{figure}{\textbf{The Discovery Engine.} Parallel evolution of rule sets.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.38\linewidth}
+        % The Validation Histogram
+        \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{./images/fitness_histogram.png}
+        \captionof{figure}{\textbf{Validation.} Signal vs Noise ($p < 0.001$).}
+    \end{minipage}
+\end{center}
+
+\section*{3. Discovery: Three Distinct Failure Modes}
+\label{sec:org9616906}
+The DSSD framework identified three robust, distinct \textbf{\textbf{"Functional States"}} within the heterogeneous PD population.
+
+
+% --- FIGURE 2: RULES & OVERLAP ---
+\begin{center}
+    \begin{minipage}{0.58\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/subgroup_analysis.png}
+        \captionof{figure}{Discovered Rules.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.38\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/subgroup_overlap_venn.png}
+        \captionof{figure}{\textbf{Distinct States.} Minimal overlap.}
+    \end{minipage}
+\end{center}
+
+\section*{4. Biological Characterization}
+\label{sec:orgd7e3730}
+Functional enrichment analysis (Enrichr) reveals that each subgroup is
+charaterized by distinct pathological mechanism, supporting the "Orthogonal Failure Mode" hypothesis.
+
+\begin{itemize}
+\item \textbf{\textbf{Rule 1 (Metabolic):}} Characterized by a \textbf{\textbf{bioenergetic collapse}}, indicated by extreme enrichment for \emph{Mitochondrial Myopathy} and \emph{Leigh Disease} signatures (\(P < 10^{-18}\)).
+\item \textbf{\textbf{Rule 2 (Iron/Stress):}} Defined by the dysregulation of \textbf{\textbf{Iron Homeostasis}} and \emph{Secretory Granules}, pointing to specific lysosomal and vesicular toxicity.
+\item \textbf{\textbf{Rule 3 (Regeneration):}} Displays a \textbf{\textbf{"Frustrated Regeneration"}} phenotype. The upregulation of acute injury factors (\emph{EGR1}) and \textbf{\textbf{Axon Guidance}} machinery suggests an active attempt at structural repair.
+\end{itemize}
+
+% --- FIGURE 3: THE DOT PLOT ---
+\begin{center}
+    \includegraphics[width=0.95\linewidth,height=18cm,keepaspectratio]{./images/PD_Enrichr_DotPlot_From_Files.png}
+    \captionof{figure}{\textbf{Deconvolution of Pathology.} Analysis against GO, Jensen Diseases, and TF databases reveals three non-overlapping mechanisms.}
+\end{center}
+
+\section*{5. Impact: Functional States vs. Identity}
+\label{sec:orgfbf7844}
+Standard clustering groups cells by global transcriptomic identity. Our framework reveals states that are \textbf{\textbf{orthogonal}} to this identity.
+
+% --- FIGURE 4: COMBINED UMAP + STRESS VIOLIN ---
+\begin{center}
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/combined_umap_confetti.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/Violin_Stress_vs_OtherPD.png}
+    \end{minipage}
+    \captionof{figure}{\textbf{States are Orthogonal to Identity.} Left: Functional failure modes are scattered across diverse transcriptomic clusters. Right: These states represent a distinct, higher tier of cellular stress compared to the general PD background.}
+\end{center}
+
+\columnbreak % FORCE BREAK TO SECOND COLUMN
+
+\section*{6. Molecular \& Regulatory Architecture}
+\label{sec:orgc5e7d10}
+We identified the specific signaling pathways and protein machinery
+assoicated with these states.
+
+\subsection*{The "Regeneration" Machinery (Rule 3)}
+\label{sec:org041d8f3}
+STRING interaction analysis reveals that Rule 3 markers form a \textbf{\textbf{coordinated structural remodeling network}}, indicating active reorganization of the cell architecture.
+
+% --- FIGURE 5: STRING NETWORK ---
+\begin{center}
+    \includegraphics[width=0.85\linewidth,height=25cm,keepaspectratio]{./images/string_normal_image.png}
+    \captionof{figure}{\textbf{Coordinated Repair Program.} The cytoskeletal regulator \textit{PALD1} is functionally coupled to the matrix remodeler \textit{ADAMTS14}, linking internal actin dynamics with external scaffolding.}
+\end{center}
+
+\subsection*{Distinct Regulatory Architectures}
+\label{sec:org727b14e}
+We explored specific signaling pathways of interest by calculating single-cell module scores. This analysis characterizes the distinct regulatory profile associated with each failure mode.
+
+% --- FIGURE 6: PATHWAY VIOLINS (Pyramid Layout) ---
+\begin{center}
+    % ROW 1: The Drivers
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_dan3_regulon_TCF7L2_targets.png}
+        \centerline{\small \textbf{Rule 4: TCF7L2 (Regeneration)}}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_mapk_genes_in_wikipathways_txt.png}
+        \centerline{\small \textbf{Rule 2: MAPK (Stress)}}
+    \end{minipage}
+    
+    \vspace{0.5cm} 
+    
+    % ROW 2: The Consequence
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_DopamineKEGGpathway_txt.png}
+        \centerline{\small \textbf{Rule 1: Dopamine (Metabolic)}}
+    \end{minipage}
+    
+    \captionof{figure}{\textbf{Distinct Signaling Mechanisms.} \textit{TCF7L2} (Wnt) is upregulated in Rule 4. ($P<0.001$). \textit{MAPK} drives Rule 2 ($P<0.05$). \textit{Dopamine Metabolism} is downregulated in Rule 1 ($P<0.01$).}
+\end{center}
+\section*{7. Pseudotime Dynamics}
+\label{sec:orgccc5cba}
+We mapped the subgroups onto a pseudotime disease trajectory.
+
+% --- FIGURE 7: PSEUDOTIME DENSITY ---
+\begin{center}
+    \includegraphics[width=0.95\linewidth,height=18
+    cm,keepaspectratio]{./images/PD_Pseudotime_Chronology.png}
+    \captionof{figure}{\textbf{Disease Progression Landscape.} Metabolic dysfunction (Rule 1) presents as a broad baseline signal. The \textbf{Regenerative State (Rule 4)} is sharply localized to advanced pseudotime, followed by the peak density of \textbf{Iron Toxicity (Rule 2)}, suggesting these are distinct late-stage phenomena.}
+\end{center}
+
+
+\section*{Conclusion}
+\label{sec:orgc235af1}
+We have mapped the regulatory crosstalk of PD into three potentially actionable states:
+
+\begin{enumerate}
+\item \textbf{\textbf{Metabolic (Baseline):}} Mitochondrial support.
+\item \textbf{\textbf{Iron-Toxic (Acute):}} Marked by MAPK and functional demand.
+\item \textbf{\textbf{Regenerative (Structural):}} A coordinated but frustrated attempt at repair linked to TCF7L2.
+\end{enumerate}
+
+\end{multicols}
+\end{document}

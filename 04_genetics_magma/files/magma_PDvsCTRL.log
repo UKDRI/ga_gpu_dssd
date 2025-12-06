@@ -1,0 +1,33 @@
+Welcome to MAGMA v1.10 (custom)
+Using flags:
+	--gene-results /Users/samneaves/Documents/gwas_catalog/ieu_b7_PD_gene.genes.raw
+	--set-annot rule_PDvsCTRL_entrez.set
+	--out magma_PDvsCTRL
+
+Start time is 17:01:53, Friday 05 Dec 2025
+
+Reading file /Users/samneaves/Documents/gwas_catalog/ieu_b7_PD_gene.genes.raw... 
+	18168 genes read from file
+Loading gene-set annotation...
+Reading file rule_PDvsCTRL_entrez.set... 
+	3 gene-set definitions read from file
+	found 3 gene sets containing genes defined in genotype data (containing a total of 344 unique genes)
+Preparing variables for analysis...
+	truncating Z-scores 3 points below zero or 6 standard deviations above the mean
+	truncating covariate values more than 5 standard deviations from the mean
+	total variables available for analysis: 3 gene sets
+
+Parsing model specifications...
+Inverting gene-gene correlation matrix...
+Performing regression analysis...
+	testing direction: one-sided, positive (sets), two-sided (covar)
+	conditioning on internal variables:
+		gene size, log(gene size)
+		gene density, log(gene density)
+		inverse mac, log(inverse mac)
+	analysing individual variables
+
+	analysing single-variable models (number of models: 3)
+	writing results to file magma_PDvsCTRL.gsa.out
+
+End time is 17:02:00, Friday 05 Dec 2025 (elapsed: 00:00:07)

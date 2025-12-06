@@ -1,0 +1,29 @@
+* Run magma
+
+** PDVSCTRL
+#+BEGIN_SRC bash :results output :dir /Users/samneaves/Documents/ga_gpu_dssd/magma
+
+# 1) Gene-set analysis for PDvsCTRL DE gene sets
+magma \
+  --bfile /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR \
+  --gene-results /Users/samneaves/Documents/gwas_catalog/ieu_b7_PD_gene.genes.raw \
+  --set-annot rule_PDvsCTRL_entrez.set \
+  --out magma_PDvsCTRL
+
+#+END_SRC
+
+#+RESULTS:
+
+
+** RulevsRest
+#+BEGIN_SRC bash :results output :dir /Users/samneaves/Documents/ga_gpu_dssd/magma
+
+# 2) Gene-set analysis for Rule-vs-Rest DE gene sets
+magma \
+  --bfile /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR \
+  --gene-results /Users/samneaves/Documents/gwas_catalog/ieu_b7_PD_gene.genes.raw \
+  --set-annot rule_ruleVsRest_entrez.set \
+  --out magma_RuleVsRest
+
+#+END_SRC
+

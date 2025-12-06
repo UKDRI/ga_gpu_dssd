@@ -1,404 +1,0 @@
-# -*- org-confirm-babel-evaluate: nil -*-
-#+OPTIONS: ^:nil
-#+title: Load and transform SC data to binary values for GPU
-#+author: Sam Neaves
-
-
-#+begin_src R :session *R* :results output
-1+1
-#+end_src
-
-#+RESULTS:
-: [1] 2
-
-#+begin_src R :session *R* :results output
-# Load required libraries
-library(Seurat)
-library(dplyr)
-
-# Define the file path
-data_file <- "SNatlas_DaNs_seurat.RData"
-
-if (file.exists(data_file)) {
-    # load() returns a character vector of the names of loaded objects
-    # We'll print them to see what was loaded
-    print("Loading data... Object(s) loaded:")
-    loaded_object_names <- load(data_file)
-    print(loaded_object_names)
-    
-    # --- IMPORTANT ---
-    # We assume the main Seurat object is the *first* one listed.
-    # If it's not, you'll need to change loaded_object_names[1] to the correct name.
-    seurat_object_name <- loaded_object_names[1]
-    
-    # 'get()' retrieves the object from the environment by its string name
-    seurat_obj <- get(seurat_object_name)
-    
-    print(paste("--- Inspecting object:", seurat_object_name, "---"))
-    print(seurat_obj) # This will print a summary (e.g., 20000 features across 5000 cells)
-    
-    print("--- Metadata Column Names (to find donor/disease) ---")
-    # This will show all available metadata fields (e.g., "donor_id", "disease_status", "nFeature_RNA")
-    print(colnames(seurat_obj@meta.data))
-    
-    print("--- First 5 Rows of Metadata (to see values) ---")
-    # This helps us see the actual values, like "ctrl", "PD", "donor_1", etc.
-    print(head(seurat_obj@meta.data, 5))
-    
-} else {
-    print(paste("Error: Data file not found at", data_file))
-    print("Please check the file path and that you are in the correct directory.")
-}
-#+end_src
-
-#+RESULTS:
-#+begin_example
-Loading required package: SeuratObject
-Loading required package: sp
-
-Attaching package: ‘SeuratObject’
-
-The following objects are masked from ‘package:base’:
-
-    intersect, t
-
-Warning messages:
-1: package ‘Seurat’ was built under R version 4.4.3 
-2: package ‘SeuratObject’ was built under R version 4.4.3
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-[1] "Loading data... Object(s) loaded:"
-[1] "sn_atlas_dans"
-[1] "--- Inspecting object: sn_atlas_dans ---"
-An object of class Seurat 
-19803 features across 7488 samples within 1 assay 
-Active assay: RNA (19803 features, 2000 variable features)
- 3 layers present: counts, data, scale.data
- 2 dimensional reductions calculated: pca, umap
-[1] "--- Metadata Column Names (to find donor/disease) ---"
- [1] "orig.ident"      "nCount_RNA"      "nFeature_RNA"    "Barcode"        
- [5] "Sample"          "name"            "Sample_v2"       "Disease"        
- [9] "Sex"             "CellType"        "CellSubType"     "clust.disease"  
-[13] "cluster"         "RNA_snn_res.0.6" "seurat_clusters" "cellt_dis"      
-[1] "--- First 5 Rows of Metadata (to see values) ---"
-                               orig.ident nCount_RNA nFeature_RNA
-ATTCAAGGCGATATCC_chip02_HC1 SeuratProject     496313        15120
-ATTCAAGGTTAGGCGG_chip02_HC1 SeuratProject     680897        16492
-GACTCAAGAGTCTCCG_chip02_HC1 SeuratProject      23228         7135
-CTAAGCATCTTCTTAC_chip02_HC1 SeuratProject     362198        14220
-TCTCCTAGTGGCGGTT_chip02_HC1 SeuratProject     450873        13178
-                                     Barcode Sample                        name
-ATTCAAGGCGATATCC_chip02_HC1 ATTCAAGGCGATATCC    HC1 ATTCAAGGCGATATCC_chip02_HC1
-ATTCAAGGTTAGGCGG_chip02_HC1 ATTCAAGGTTAGGCGG    HC1 ATTCAAGGTTAGGCGG_chip02_HC1
-GACTCAAGAGTCTCCG_chip02_HC1 GACTCAAGAGTCTCCG    HC1 GACTCAAGAGTCTCCG_chip02_HC1
-CTAAGCATCTTCTTAC_chip02_HC1 CTAAGCATCTTCTTAC    HC1 CTAAGCATCTTCTTAC_chip02_HC1
-TCTCCTAGTGGCGGTT_chip02_HC1 TCTCCTAGTGGCGGTT    HC1 TCTCCTAGTGGCGGTT_chip02_HC1
-                            Sample_v2 Disease Sex CellType CellSubType
-ATTCAAGGCGATATCC_chip02_HC1    12_137     CTR   M      DaN       DaN_0
-ATTCAAGGTTAGGCGG_chip02_HC1    12_137     CTR   M      DaN       DaN_0
-GACTCAAGAGTCTCCG_chip02_HC1    12_137     CTR   M      DaN       DaN_1
-CTAAGCATCTTCTTAC_chip02_HC1    12_137     CTR   M      DaN       DaN_1
-TCTCCTAGTGGCGGTT_chip02_HC1    12_137     CTR   M      DaN       DaN_0
-                            clust.disease   cluster RNA_snn_res.0.6
-ATTCAAGGCGATATCC_chip02_HC1       DaN_CTR DaN_0_CTR               3
-ATTCAAGGTTAGGCGG_chip02_HC1       DaN_CTR DaN_0_CTR               3
-GACTCAAGAGTCTCCG_chip02_HC1       DaN_CTR DaN_1_CTR               3
-CTAAGCATCTTCTTAC_chip02_HC1       DaN_CTR DaN_1_CTR               3
-TCTCCTAGTGGCGGTT_chip02_HC1       DaN_CTR DaN_0_CTR               1
-                            seurat_clusters cellt_dis
-ATTCAAGGCGATATCC_chip02_HC1               3 DaN_0_CTR
-ATTCAAGGTTAGGCGG_chip02_HC1               3 DaN_0_CTR
-GACTCAAGAGTCTCCG_chip02_HC1               3 DaN_1_CTR
-CTAAGCATCTTCTTAC_chip02_HC1               3 DaN_1_CTR
-TCTCCTAGTGGCGGTT_chip02_HC1               1 DaN_0_CTR
-#+end_example
-
-
-#+begin_src R :session *R* :results output
-# We assume 'seurat_obj' is still in memory from the previous block
-if (exists("seurat_obj")) {
-    
-    print("--- Unique values in 'Disease' column ---")
-    print(unique(seurat_obj@meta.data$Disease))
-    
-    print("--- Frequency table for 'Disease' column ---")
-    print(table(seurat_obj@meta.data$Disease))
-    
-    print("--- Unique values in 'Sample_v2' (donor) column ---")
-    print(unique(seurat_obj@meta.data$Sample_v2))
-    
-    print("--- Number of unique donors ---")
-    print(length(unique(seurat_obj@meta.data$Sample_v2)))
-
-} else {
-    print("Error: 'seurat_obj' not found in memory. Please re-run the previous block.")
-}
-#+end_src
-
-#+RESULTS:
-#+begin_example
-[1] "--- Unique values in 'Disease' column ---"
-[1] "CTR"       "PD_B5-6"   "ILBD_B1-2" "PD_B3-4"   "ILBD_B3-4"
-[1] "--- Frequency table for 'Disease' column ---"
-
-      CTR ILBD_B1-2 ILBD_B3-4   PD_B3-4   PD_B5-6 
-     3358       309       794       722      2305 
-[1] "--- Unique values in 'Sample_v2' (donor) column ---"
- [1] "12_137" "12_131" "12_121" "15_008" "12_136" "10_069" "13_126" "15_013"
- [9] "PD_714" "PD_816" "PD_792" "18_005" "13_068" "13_071" "PD_703" "PD_801"
-[17] "PD_730" "12_124" "06_017"
-[1] "--- Number of unique donors ---"
-[1] 19
-#+end_example
-
-* We want to transform the data and regress out the sample values so that we are 'donar aware'.
-#+begin_src R :session *R* :results output
-# We assume 'seurat_obj' is still in memory from the previous block
-if (exists("seurat_obj")) {
-    
-    # --- 1. Filter the object ---
-    print("--- Initial cell count ---")
-    print(ncol(seurat_obj)) # Show total cells before filtering
-    
-    # Define the labels we want to keep
-    labels_to_keep <- c("CTR", "PD_B5-6", "PD_B3-4")
-    
-    # Subset the object (note the use of the 'Disease' metadata column)
-    seurat_filtered <- subset(seurat_obj, subset = Disease %in% labels_to_keep)
-    
-    # --- THIS LINE WAS REMOVED, as 'Disease' is a character vector ---
-    # seurat_filtered@meta.data$Disease <- droplevels(seurat_filtered@meta.data$Disease)
-    
-    print("--- Cell count after filtering (CTR & PD only) ---")
-    print(ncol(seurat_filtered))
-    print("New 'Disease' column frequencies:")
-    print(table(seurat_filtered@meta.data$Disease))
-
-    # --- 2. Create the binary ga_label (0=CTR, 1=PD) ---
-    print("--- Creating binary 'ga_label' ---")
-    
-    # Create the new 'ga_label' column
-    seurat_filtered@meta.data <- seurat_filtered@meta.data %>%
-        mutate(ga_label = ifelse(Disease == "CTR", 0, 1))
-        
-    print("Frequency table for new 'ga_label': (0=CTR, 1=PD)")
-    print(table(seurat_filtered@meta.data$ga_label))
-
-    # --- 3. Run SCTransform to normalize AND regress confounders ---
-    print("--- Running SCTransform: Normalizing data and regressing 'Sample_v2' (donor)... ---")
-    print("(This may take a few minutes)")
-    
-    # We run this on the *filtered* object.
-    # We set variable.features.n to 3000 (a common default)
-    # Most importantly, we set vars.to.regress
-    seurat_processed <- SCTransform(seurat_filtered, 
-                                    vars.to.regress = "Sample_v2", 
-                                    variable.features.n = 3000, 
-                                    verbose = TRUE)
-    
-    print("--- SCTransform complete ---")
-    print(seurat_processed)
-
-} else {
-    print("Error: 'seurat_obj' not found in memory. Please re-run the first block.")
-}
-#+end_src
-
-#+RESULTS:
-#+begin_example
-[1] "--- Initial cell count ---"
-[1] 7488
-[1] "--- Cell count after filtering (CTR & PD only) ---"
-[1] 6385
-[1] "New 'Disease' column frequencies:"
-
-    CTR PD_B3-4 PD_B5-6 
-   3358     722    2305 
-[1] "--- Creating binary 'ga_label' ---"
-[1] "Frequency table for new 'ga_label': (0=CTR, 1=PD)"
-
-   0    1 
-3358 3027 
-[1] "--- Running SCTransform: Normalizing data and regressing 'Sample_v2' (donor)... ---"
-[1] "(This may take a few minutes)"
-Running SCTransform on assay: RNA
-vst.flavor='v2' set. Using model with fixed slope and excluding poisson genes.
-`vst.flavor` is set to 'v2' but could not find glmGamPoi installed.
-Please install the glmGamPoi package for much faster estimation.
---------------------------------------------
-install.packages('BiocManager')
-BiocManager::install('glmGamPoi')
---------------------------------------------
-Falling back to native (slower) implementation.
-
-Calculating cell attributes from input UMI matrix: log_umi
-Variance stabilizing transformation of count matrix of size 19769 by 6385
-Model formula is y ~ log_umi
-Get Negative Binomial regression parameters per gene
-Using 2000 genes, 5000 cells
-Found 4 outliers - those will be ignored in fitting/regularization step
-
-Second step: Get residuals using fitted parameters for 19769 genes
-Computing corrected count matrix for 19769 genes
-Calculating gene attributes
-Wall clock passed: Time difference of 9.069349 mins
-Determine variable features
-Regressing out Sample_v2
-  |                                                                              |                                                                      |   0%  |                                                                              |                                                                      |   1%  |                                                                              |=                                                                     |   1%  |                                                                              |=                                                                     |   2%  |                                                                              |==                                                                    |   2%  |                                                                              |==                                                                    |   3%  |                                                                              |==                                                                    |   4%  |                                                                              |===                                                                   |   4%  |                                                                              |===                                                                   |   5%  |                                                                              |====                                                                  |   5%  |                                                                              |====                                                                  |   6%  |                                                                              |=====                                                                 |   6%  |                                                                              |=====                                                                 |   7%  |                                                                              |=====                                                                 |   8%  |                                                                              |======                                                                |   8%  |                                                                              |======                                                                |   9%  |                                                                              |=======                                                               |   9%  |                                                                              |=======                                                               |  10%  |                                                                              |=======                                                               |  11%  |                                                                              |========                                                              |  11%  |                                                                              |========                                                              |  12%  |                                                                              |=========                                                             |  12%  |                                                                              |=========                                                             |  13%  |                                                                              |=========                                                             |  14%  |                                                                              |==========                                                            |  14%  |                                                                              |==========                                                            |  15%  |                                                                              |===========                                                           |  15%  |                                                                              |===========                                                           |  16%  |                                                                              |============                                                          |  16%  |                                                                              |============                                                          |  17%  |                                                                              |============                                                          |  18%  |                                                                              |=============                                                         |  18%  |                                                                              |=============                                                         |  19%  |                                                                              |==============                                                        |  19%  |                                                                              |==============                                                        |  20%  |                                                                              |==============                                                        |  21%  |                                                                              |===============                                                       |  21%  |                                                                              |===============                                                       |  22%  |                                                                              |================                                                      |  22%  |                                                                              |================                                                      |  23%  |                                                                              |================                                                      |  24%  |                                                                              |=================                                                     |  24%  |                                                                              |=================                                                     |  25%  |                                                                              |==================                                                    |  25%  |                                                                              |==================                                                    |  26%  |                                                                              |===================                                                   |  26%  |                                                                              |===================                                                   |  27%  |                                                                              |===================                                                   |  28%  |                                                                              |====================                                                  |  28%  |                                                                              |====================                                                  |  29%  |                                                                              |=====================                                                 |  29%  |                                                                              |=====================                                                 |  30%  |                                                                              |=====================                                                 |  31%  |                                                                              |======================                                                |  31%  |                                                                              |======================                                                |  32%  |                                                                              |=======================                                               |  32%  |                                                                              |=======================                                               |  33%  |                                                                              |=======================                                               |  34%  |                                                                              |========================                                              |  34%  |                                                                              |========================                                              |  35%  |                                                                              |=========================                                             |  35%  |                                                                              |=========================                                             |  36%  |                                                                              |==========================                                            |  36%  |                                                                              |==========================                                            |  37%  |                                                                              |==========================                                            |  38%  |                                                                              |===========================                                           |  38%  |                                                                              |===========================                                           |  39%  |                                                                              |============================                                          |  39%  |                                                                              |============================                                          |  40%  |                                                                              |============================                                          |  41%  |                                                                              |=============================                                         |  41%  |                                                                              |=============================                                         |  42%  |                                                                              |==============================                                        |  42%  |                                                                              |==============================                                        |  43%  |                                                                              |==============================                                        |  44%  |                                                                              |===============================                                       |  44%  |                                                                              |===============================                                       |  45%  |                                                                              |================================                                      |  45%  |                                                                              |================================                                      |  46%  |                                                                              |=================================                                     |  46%  |                                                                              |=================================                                     |  47%  |                                                                              |=================================                                     |  48%  |                                                                              |==================================                                    |  48%  |                                                                              |==================================                                    |  49%  |                                                                              |===================================                                   |  49%  |                                                                              |===================================                                   |  50%  |                                                                              |===================================                                   |  51%  |                                                                              |====================================                                  |  51%  |                                                                              |====================================                                  |  52%  |                                                                              |=====================================                                 |  52%  |                                                                              |=====================================                                 |  53%  |                                                                              |=====================================                                 |  54%  |                                                                              |======================================                                |  54%  |                                                                              |======================================                                |  55%  |                                                                              |=======================================                               |  55%  |                                                                              |=======================================                               |  56%  |                                                                              |========================================                              |  56%  |                                                                              |========================================                              |  57%  |                                                                              |========================================                              |  58%  |                                                                              |=========================================                             |  58%  |                                                                              |=========================================                             |  59%  |                                                                              |==========================================                            |  59%  |                                                                              |==========================================                            |  60%  |                                                                              |==========================================                            |  61%  |                                                                              |===========================================                           |  61%  |                                                                              |===========================================                           |  62%  |                                                                              |============================================                          |  62%  |                                                                              |============================================                          |  63%  |                                                                              |============================================                          |  64%  |                                                                              |=============================================                         |  64%  |                                                                              |=============================================                         |  65%  |                                                                              |==============================================                        |  65%  |                                                                              |==============================================                        |  66%  |                                                                              |===============================================                       |  66%  |                                                                              |===============================================                       |  67%  |                                                                              |===============================================                       |  68%  |                                                                              |================================================                      |  68%  |                                                                              |================================================                      |  69%  |                                                                              |=================================================                     |  69%  |                                                                              |=================================================                     |  70%  |                                                                              |=================================================                     |  71%  |                                                                              |==================================================                    |  71%  |                                                                              |==================================================                    |  72%  |                                                                              |===================================================                   |  72%  |                                                                              |===================================================                   |  73%  |                                                                              |===================================================                   |  74%  |                                                                              |====================================================                  |  74%  |                                                                              |====================================================                  |  75%  |                                                                              |=====================================================                 |  75%  |                                                                              |=====================================================                 |  76%  |                                                                              |======================================================                |  76%  |                                                                              |======================================================                |  77%  |                                                                              |======================================================                |  78%  |                                                                              |=======================================================               |  78%  |                                                                              |=======================================================               |  79%  |                                                                              |========================================================              |  79%  |                                                                              |========================================================              |  80%  |                                                                              |========================================================              |  81%  |                                                                              |=========================================================             |  81%  |                                                                              |=========================================================             |  82%  |                                                                              |==========================================================            |  82%  |                                                                              |==========================================================            |  83%  |                                                                              |==========================================================            |  84%  |                                                                              |===========================================================           |  84%  |                                                                              |===========================================================           |  85%  |                                                                              |============================================================          |  85%  |                                                                              |============================================================          |  86%  |                                                                              |=============================================================         |  86%  |                                                                              |=============================================================         |  87%  |                                                                              |=============================================================         |  88%  |                                                                              |==============================================================        |  88%  |                                                                              |==============================================================        |  89%  |                                                                              |===============================================================       |  89%  |                                                                              |===============================================================       |  90%  |                                                                              |===============================================================       |  91%  |                                                                              |================================================================      |  91%  |                                                                              |================================================================      |  92%  |                                                                              |=================================================================     |  92%  |                                                                              |=================================================================     |  93%  |                                                                              |=================================================================     |  94%  |                                                                              |==================================================================    |  94%  |                                                                              |==================================================================    |  95%  |                                                                              |===================================================================   |  95%  |                                                                              |===================================================================   |  96%  |                                                                              |====================================================================  |  96%  |                                                                              |====================================================================  |  97%  |                                                                              |====================================================================  |  98%  |                                                                              |===================================================================== |  98%  |                                                                              |===================================================================== |  99%  |                                                                              |======================================================================|  99%  |                                                                              |======================================================================| 100%
-Centering data matrix
-  |                                                                              |                                                                      |   0%  |                                                                              |==================                                                    |  25%  |                                                                              |===================================                                   |  50%  |                                                                              |====================================================                  |  75%  |                                                                              |======================================================================| 100%
-Place corrected count matrix in counts slot
-Set default assay to SCT
-[1] "--- SCTransform complete ---"
-An object of class Seurat 
-39572 features across 6385 samples within 2 assays 
-Active assay: SCT (19769 features, 3000 variable features)
- 3 layers present: counts, data, scale.data
- 1 other assay present: RNA
- 2 dimensional reductions calculated: pca, umap
-There were 34 warnings (use warnings() to see them)
-#+end_example
-
-#+begin_src R :session *R* :results output
-# We assume 'seurat_processed' is in memory from the previous block
-if (exists("seurat_processed")) {
-    
-    # --- 1. Set the Active Identity ---
-    print("Setting active identity to 'ga_label' (0=CTR, 1=PD)")
-    Idents(seurat_processed) <- "ga_label"
-
-    # --- 2. Find Differentially Expressed (DE) genes ---
-    print(paste("--- Running FindMarkers on the 3000 variable features... ---"))
-    
-    # Get the 3000 variable features identified by SCTransform
-    variable_genes <- seurat_processed[["SCT"]]@var.features
-    
-    de_markers <- FindMarkers(seurat_processed, 
-                              ident.1 = 1, 
-                              ident.0 = 0, 
-                              assay = "SCT",
-                              features = variable_genes, # <-- THIS IS THE NEW LINE
-                              logfc.threshold = 0,
-                              min.pct = 0)
-    
-    print(paste("--- DE test complete. Found", nrow(de_markers), "genes among the", length(variable_genes), "variable features. ---"))
-
-    # --- 3. Show top 10 DE genes ---
-    print("--- Top 10 Differentially Expressed Genes (PD vs CTR) ---")
-    print(head(de_markers, 10))
-
-} else {
-    print("Error: 'seurat_processed' not found in memory. Please re-run the previous block.")
-}
-#+end_src
-
-#+RESULTS:
-#+begin_example
-[1] "Setting active identity to 'ga_label' (0=CTR, 1=PD)"
-[1] "--- Running FindMarkers on the 3000 variable features... ---"
-For a (much!) faster implementation of the Wilcoxon Rank Sum Test,
-(default method for FindMarkers) please install the presto package
---------------------------------------------
-install.packages('devtools')
-devtools::install_github('immunogenomics/presto')
---------------------------------------------
-After installation of presto, Seurat will automatically use the more 
-efficient implementation (no further action necessary).
-This message will be shown once per session
-  |                                                  | 0 % ~calculating    |+                                                 | 1 % ~02m 37s        |+                                                 | 2 % ~02m 29s        |++                                                | 3 % ~02m 24s        |++                                                | 4 % ~02m 20s        |+++                                               | 5 % ~02m 18s        |+++                                               | 6 % ~02m 15s        |++++                                              | 7 % ~02m 13s        |++++                                              | 8 % ~02m 11s        |+++++                                             | 9 % ~02m 09s        |+++++                                             | 10% ~02m 08s        |++++++                                            | 11% ~02m 07s        |++++++                                            | 12% ~02m 05s        |+++++++                                           | 13% ~02m 04s        |+++++++                                           | 14% ~02m 02s        |++++++++                                          | 15% ~02m 01s        |++++++++                                          | 16% ~01m 59s        |+++++++++                                         | 17% ~01m 58s        |+++++++++                                         | 18% ~01m 56s        |++++++++++                                        | 19% ~01m 55s        |++++++++++                                        | 20% ~01m 53s        |+++++++++++                                       | 21% ~01m 52s        |+++++++++++                                       | 22% ~01m 51s        |++++++++++++                                      | 23% ~01m 49s        |++++++++++++                                      | 24% ~01m 48s        |+++++++++++++                                     | 25% ~01m 46s        |+++++++++++++                                     | 26% ~01m 45s        |++++++++++++++                                    | 27% ~01m 43s        |++++++++++++++                                    | 28% ~01m 42s        |+++++++++++++++                                   | 29% ~01m 40s        |+++++++++++++++                                   | 30% ~01m 39s        |++++++++++++++++                                  | 31% ~01m 38s        |++++++++++++++++                                  | 32% ~01m 36s        |+++++++++++++++++                                 | 33% ~01m 35s        |+++++++++++++++++                                 | 34% ~01m 33s        |++++++++++++++++++                                | 35% ~01m 32s        |++++++++++++++++++                                | 36% ~01m 31s        |+++++++++++++++++++                               | 37% ~01m 29s        |+++++++++++++++++++                               | 38% ~01m 28s        |++++++++++++++++++++                              | 39% ~01m 26s        |++++++++++++++++++++                              | 40% ~01m 25s        |+++++++++++++++++++++                             | 41% ~01m 23s        |+++++++++++++++++++++                             | 42% ~01m 22s        |++++++++++++++++++++++                            | 43% ~01m 21s        |++++++++++++++++++++++                            | 44% ~01m 19s        |+++++++++++++++++++++++                           | 45% ~01m 18s        |+++++++++++++++++++++++                           | 46% ~01m 16s        |++++++++++++++++++++++++                          | 47% ~01m 15s        |++++++++++++++++++++++++                          | 48% ~01m 14s        |+++++++++++++++++++++++++                         | 49% ~01m 12s        |+++++++++++++++++++++++++                         | 50% ~01m 11s        |++++++++++++++++++++++++++                        | 51% ~01m 09s        |++++++++++++++++++++++++++                        | 52% ~01m 08s        |+++++++++++++++++++++++++++                       | 53% ~01m 07s        |+++++++++++++++++++++++++++                       | 54% ~01m 05s        |++++++++++++++++++++++++++++                      | 55% ~01m 04s        |++++++++++++++++++++++++++++                      | 56% ~01m 02s        |+++++++++++++++++++++++++++++                     | 57% ~01m 01s        |+++++++++++++++++++++++++++++                     | 58% ~59s            |++++++++++++++++++++++++++++++                    | 59% ~58s            |++++++++++++++++++++++++++++++                    | 60% ~57s            |+++++++++++++++++++++++++++++++                   | 61% ~55s            |+++++++++++++++++++++++++++++++                   | 62% ~54s            |++++++++++++++++++++++++++++++++                  | 63% ~52s            |++++++++++++++++++++++++++++++++                  | 64% ~51s            |+++++++++++++++++++++++++++++++++                 | 65% ~50s            |+++++++++++++++++++++++++++++++++                 | 66% ~48s            |++++++++++++++++++++++++++++++++++                | 67% ~47s            |++++++++++++++++++++++++++++++++++                | 68% ~45s            |+++++++++++++++++++++++++++++++++++               | 69% ~44s            |+++++++++++++++++++++++++++++++++++               | 70% ~43s            |++++++++++++++++++++++++++++++++++++              | 71% ~41s            |++++++++++++++++++++++++++++++++++++              | 72% ~40s            |+++++++++++++++++++++++++++++++++++++             | 73% ~38s            |+++++++++++++++++++++++++++++++++++++             | 74% ~37s            |++++++++++++++++++++++++++++++++++++++            | 75% ~35s            |++++++++++++++++++++++++++++++++++++++            | 76% ~34s            |+++++++++++++++++++++++++++++++++++++++           | 77% ~33s            |+++++++++++++++++++++++++++++++++++++++           | 78% ~31s            |++++++++++++++++++++++++++++++++++++++++          | 79% ~30s            |++++++++++++++++++++++++++++++++++++++++          | 80% ~28s            |+++++++++++++++++++++++++++++++++++++++++         | 81% ~27s            |+++++++++++++++++++++++++++++++++++++++++         | 82% ~26s            |++++++++++++++++++++++++++++++++++++++++++        | 83% ~24s            |++++++++++++++++++++++++++++++++++++++++++        | 84% ~23s            |+++++++++++++++++++++++++++++++++++++++++++       | 85% ~21s            |+++++++++++++++++++++++++++++++++++++++++++       | 86% ~20s            |++++++++++++++++++++++++++++++++++++++++++++      | 87% ~18s            |++++++++++++++++++++++++++++++++++++++++++++      | 88% ~17s            |+++++++++++++++++++++++++++++++++++++++++++++     | 89% ~16s            |+++++++++++++++++++++++++++++++++++++++++++++     | 90% ~14s            |++++++++++++++++++++++++++++++++++++++++++++++    | 91% ~13s            |++++++++++++++++++++++++++++++++++++++++++++++    | 92% ~11s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 93% ~10s            |+++++++++++++++++++++++++++++++++++++++++++++++   | 94% ~09s            |++++++++++++++++++++++++++++++++++++++++++++++++  | 95% ~07s            |++++++++++++++++++++++++++++++++++++++++++++++++  | 96% ~06s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 97% ~04s            |+++++++++++++++++++++++++++++++++++++++++++++++++ | 98% ~03s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 99% ~01s            |++++++++++++++++++++++++++++++++++++++++++++++++++| 100% elapsed=02m 22s
-[1] "--- DE test complete. Found 3000 genes among the 3000 variable features. ---"
-[1] "--- Top 10 Differentially Expressed Genes (PD vs CTR) ---"
-               p_val avg_log2FC pct.1 pct.2     p_val_adj
-ZMIZ1  7.095403e-216  -1.708982 0.957 0.984 1.402690e-211
-PRDM16 4.452505e-203  -1.740363 0.961 0.974 8.802157e-199
-GSE1   1.909461e-201  -1.521927 0.992 0.990 3.774813e-197
-NCOR2  1.214183e-194  -1.503506 0.925 0.975 2.400319e-190
-RXRA   5.556992e-189  -1.848436 0.698 0.883 1.098562e-184
-SORCS2 2.319305e-180  -1.357162 1.000 0.996 4.585034e-176
-MT-CO2 4.236327e-171   1.278231 0.973 0.801 8.374795e-167
-IQSEC1 1.831317e-162  -1.394932 0.997 0.994 3.620331e-158
-MEGF6  5.065712e-161  -2.119259 0.662 0.851 1.001441e-156
-TNS1   6.132571e-156  -1.581515 0.977 0.983 1.212348e-151
-Warning message:
-[1m[22m`PackageCheck()` was deprecated in SeuratObject 5.0.0.
-[36mℹ[39m Please use `rlang::check_installed()` instead.
-[36mℹ[39m The deprecated feature was likely used in the [34mSeurat[39m package.
-  Please report the issue at [3m[34m<https://github.com/satijalab/seurat/issues>[39m[23m.
-[90mThis warning is displayed once every 8 hours.[39m
-[90mCall `lifecycle::last_lifecycle_warnings()` to see where this warning was[39m
-[90mgenerated.[39m
-#+end_example
-
-
-
-#+begin_src R :session *R* :results output
-# We assume 'seurat_processed' and 'de_markers' are in memory
-if (exists("seurat_processed") && exists("de_markers")) {
-
-    # --- 1. Select Top 1000 Features ---
-    num_features_to_select <- 1000
-    
-    print(paste("--- Selecting top", num_features_to_select, "features based on p_val_adj ---"))
-    
-    top_markers <- de_markers %>%
-        arrange(p_val_adj) %>%
-        head(num_features_to_select)
-        
-    top_gene_names <- rownames(top_markers)
-    
-    print("--- Top 5 genes in our final set: ---")
-    print(head(top_markers, 5))
-
-    # --- 2. Extract Corrected Data Matrix ---
-    print("--- Extracting scaled, corrected data matrix ---")
-    
-    scaled_data_matrix <- t(seurat_processed@assays$SCT@scale.data[top_gene_names, ])
-    
-    print(paste("Scaled data matrix dimensions (cells x genes):", 
-                paste(dim(scaled_data_matrix), collapse = " x ")))
-
-    # --- 3. Binarize the Data ---
-    print("--- Binarizing the data (> 0 -> 1, <= 0 -> 0) ---")
-    
-    X_binary_matrix <- ifelse(scaled_data_matrix > 0, 1, 0)
-    
-    print("--- Binarized matrix dimensions: ---")
-    print(dim(X_binary_matrix))
-
-    # --- 4. Extract Labels ---
-    print("--- Extracting final labels ---")
-    y_labels <- seurat_processed@meta.data$ga_label
-    print(paste("Total labels:", length(y_labels)))
-    print("Label frequency (0=CTR, 1=PD):")
-    print(table(y_labels))
-
-    # --- 5. Export to CSV ---
-    print("--- Exporting X_binary.csv and y_labels.csv ---")
-    
-    write.csv(X_binary_matrix, "X_binary.csv", row.names = FALSE)
-    write.csv(y_labels, "y_labels.csv", row.names = FALSE, col.names = "label")
-
-    # --- 6. (NEW) Export Cell IDs for Safekeeping ---
-    print("--- Exporting cell_ids.csv ---")
-    
-    # Get the cell barcodes, which are the rownames of the metadata
-    cell_ids <- rownames(seurat_processed@meta.data)
-    
-    # Save them to a file
-    write.csv(cell_ids, "cell_ids.csv", row.names = FALSE, col.names = "cell_id")
-
-    print("--- All done! ---")
-    print("You are now ready to copy 'X_binary.csv', 'y_labels.csv', and 'cell_ids.csv' to the GPU machine.")
-
-} else {
-    print("Error: 'seurat_processed' or 'de_markers' not found. Please re-run previous blocks.")
-}
-#+end_src

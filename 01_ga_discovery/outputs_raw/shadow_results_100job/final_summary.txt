@@ -1,0 +1,37 @@
+--- PARAMETERS (from Task 0) ---
+num_positives: 3027
+num_negatives: 3358
+--- Final Permutation Test ---
+Real Data Fitness: 0.05830274
+Total Permuted Runs Found: 999
+Max Permuted Fitness: 0.02867808
+Avg Permuted Fitness: 0.02420944
+Std Dev Permuted Fitness: 0.00126870
+
+Empirical p-value (B+1)/(N+1): (0 + 1) / (999 + 1) = 0.001000
+  (Count of permuted scores >= real score: 0)
+
+--- Top 5 Rule Sets (from REAL data run [Permutation 0]) ---
+--- Rank 1 (Fitness: 0.05830276) ---
+Chromosome Coverage:
+- Covered: 3131 / 6385 total samples
+- Positives: 1866 / 3027 total positives
+- Negatives: 1265 / 3358 total negatives
+Fitness Calculation:
+- Subgroup Size Fraction (A): 0.4904 (3131 / 6385)
+- Local Pos Fraction (B):   0.5960 (1866 / 3131)
+- Global Pos Fraction (C):  0.4741 (3027 / 6385)
+- WRAcc Quality (D = A*(B-C)): 0.05977383
+- Overlap Ratio (E):          1.0252
+- Final Fitness (D / E):      0.05830276
+Rules:
+- Rule 1: TTC1=0 AND AJAP1=1 AND MYO15B=1 AND OBSCN=1 AND CLDND1=0 AND RPL31=0 AND NDUFB1=0 AND COPB2=0 AND AC099489.1=1 AND RSRC2=0 AND IDS=0 AND UQCRB=0 AND LANCL1=0
+(Covers: 33 total | 28 Pos | 5 Neg)
+- Rule 2: MT-ND6=1 AND HDAC5=1 AND C11orf58=1 AND SLC22A23=0 AND SNRPG=1 AND DAP3=0 AND HID1=1 AND TMEM184B=0 AND MAPT=0 AND SPOCK2=1 AND CCNH=0 AND RPS16=0 AND TRIM2=0
+(Covers: 1 total | 1 Pos | 0 Neg)
+- Rule 3: SEPT7=0 AND SF3B1=0 AND FRMD8=1 AND CD81=0 AND HIPK2=0 AND PHLDB1=0 AND AKNA=1 AND PKP4=0 AND RPS16=0 AND CPEB4=0 AND RPS12=0
+(Covers: 107 total | 88 Pos | 19 Neg)
+- Rule 4: COL27A1=1 AND ADGRA1=1 AND TSC22D1=0 AND NFASC=0 AND NDRG1=0 AND RPS18=0 AND SKP1=0 AND RAC1=0 AND AC099489.1=1 AND COX7A2=0 AND ACOT7=1 AND SAR1A=0 AND PSEN1=0 AND COX7C=0
+(Covers: 34 total | 32 Pos | 2 Neg)
+- Rule 5: MT-CO2=1
+(Covers: 3035 total | 1778 Pos | 1257 Neg)

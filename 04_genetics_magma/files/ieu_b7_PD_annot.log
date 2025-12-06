@@ -1,0 +1,62 @@
+Welcome to MAGMA v1.10 (custom)
+Using flags:
+	--annotate
+	--snp-loc /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR.bim
+	--gene-loc /Users/samneaves/Documents/gwas_catalog/NCBI37.3/NCBI37.3.gene.loc
+	--out ieu_b7_PD_annot
+
+Start time is 15:28:32, Friday 05 Dec 2025
+
+Starting annotation...
+Reading gene locations from file /Users/samneaves/Documents/gwas_catalog/NCBI37.3/NCBI37.3.gene.loc... 
+	19427 gene locations read from file
+	chromosome  1: 2016 genes
+	chromosome  2: 1226 genes
+	chromosome  3: 1050 genes
+	chromosome  4: 745 genes
+	chromosome  5: 856 genes
+	chromosome  6: 1016 genes
+	chromosome  7: 906 genes
+	chromosome  8: 669 genes
+	chromosome  9: 775 genes
+	chromosome 10: 723 genes
+	chromosome 11: 1275 genes
+	chromosome 12: 1009 genes
+	chromosome 13: 320 genes
+	chromosome 14: 595 genes
+	chromosome 15: 586 genes
+	chromosome 16: 817 genes
+	chromosome 17: 1147 genes
+	chromosome 18: 271 genes
+	chromosome 19: 1389 genes
+	chromosome 20: 527 genes
+	chromosome 21: 215 genes
+	chromosome 22: 442 genes
+	chromosome  X: 805 genes
+	chromosome  Y: 47 genes
+Reading SNP locations from file /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR.bim... 
+	25063419 SNP locations read from file
+	of those, 10148898 (40.49%) mapped to at least one gene
+Writing annotation to file ieu_b7_PD_annot.genes.annot
+	for chromosome  1, 16 genes are empty (out of 2016)
+	for chromosome  2, 1 gene is empty (out of 1226)
+	for chromosome  4, 14 genes are empty (out of 745)
+	for chromosome  5, 3 genes are empty (out of 856)
+	for chromosome  7, 3 genes are empty (out of 906)
+	for chromosome  8, 10 genes are empty (out of 669)
+	for chromosome  9, 4 genes are empty (out of 775)
+	for chromosome 10, 2 genes are empty (out of 723)
+	for chromosome 12, 1 gene is empty (out of 1009)
+	for chromosome 13, 4 genes are empty (out of 320)
+	for chromosome 15, 4 genes are empty (out of 586)
+	for chromosome 16, 3 genes are empty (out of 817)
+	for chromosome 17, 1 gene is empty (out of 1147)
+	for chromosome 18, 1 gene is empty (out of 271)
+	for chromosome 21, 1 gene is empty (out of 215)
+	for chromosome 22, 3 genes are empty (out of 442)
+	for chromosome  X, 43 genes are empty (out of 805)
+	for chromosome  Y, 47 genes are empty (out of 47)
+	at least one SNP mapped to each of a total of 19266 genes (out of 19427)
+
+
+End time is 15:28:59, Friday 05 Dec 2025 (elapsed: 00:00:27)

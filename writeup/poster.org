@@ -1,137 +1,190 @@
-#+TITLE:
-#+AUTHOR: Sam Neaves
-#+DATE:
-#+OPTIONS: toc:nil num:nil title:nil
+#+TITLE: Poster Content
+#+OPTIONS: toc:nil num:nil title:nil date:nil author:nil
 #+LATEX_CLASS: article
 #+LATEX_CLASS_OPTIONS: [a0paper]
-#+LATEX_HEADER: \usepackage[margin=2cm, top=2cm, bottom=2cm]{geometry}
+#+LATEX_HEADER: \usepackage[margin=1.5cm, top=1.5cm, bottom=1.5cm]{geometry}
 #+LATEX_HEADER: \usepackage{multicol}
 #+LATEX_HEADER: \usepackage{graphicx}
 #+LATEX_HEADER: \usepackage{xcolor}
-#+LATEX_HEADER: \usepackage{caption}
 #+LATEX_HEADER: \usepackage{float}
 #+LATEX_HEADER: \usepackage{helvet}
 #+LATEX_HEADER: \renewcommand{\familydefault}{\sfdefault}
 #+LATEX_HEADER: \setlength{\parindent}{0pt}
-#+LATEX_HEADER: \setlength{\parskip}{0.8em} % Increased spacing between paragraphs
+#+LATEX_HEADER: \setlength{\parskip}{0.2em} % Increased slightly to fill space
 
 
 #+LATEX_HEADER: \usepackage{titlesec}
-#+LATEX_HEADER: \titlespacing*{\section}{0pt}{0.6cm}{0.3cm}
-#+LATEX_HEADER: \titlespacing*{\subsection}{0pt}{0.4cm}{0.2cm}
-#+LATEX_HEADER: \titleformat{\section}{\fontsize{55}{65}\selectfont\bfseries\color{blue}}{}{0em}{}
-#+LATEX_HEADER: \titleformat{\subsection}{\fontsize{35}{42}\selectfont\bfseries\color{darkgray}}{}{0em}{}
+#+LATEX_HEADER: \titlespacing*{\section}{0pt}{0.4cm}{0.2cm}
+#+LATEX_HEADER: \titlespacing*{\subsection}{0pt}{0.2cm}{0.1cm}
+#+LATEX_HEADER: \titleformat{\section}{\fontsize{50}{60}\selectfont\bfseries\color{blue}}{}{0em}{}
+#+LATEX_HEADER: \titleformat{\subsection}{\fontsize{32}{40}\selectfont\bfseries\color{darkgray}}{}{0em}{}
 
 
-#+LATEX_HEADER: \usepackage[font={fontsize=24pt,28pt},labelfont={bf,color=blue},skip=10pt]{caption}
-#+LATEX_HEADER: \setlength{\columnsep}{4cm}
+#+LATEX_HEADER: \usepackage{caption}
+#+LATEX_HEADER: \DeclareCaptionFont{posterfont}{\fontsize{28}{34}\selectfont}
+#+LATEX_HEADER: \captionsetup{font={posterfont},labelfont={bf,color=blue},skip=12pt}
+#+LATEX_HEADER: \setlength{\columnsep}{2.5cm}
 
 #+BEGIN_EXPORT latex
-% --- TITLE HEADER ---
-\begin{center}
-
-\end{center}
-
-
-% --- START COLUMNS ---
+% START TWO COLUMN LAYOUT
 \begin{multicols}{2}
-\fontsize{32}{38}\selectfont % Large, readable body text
+\fontsize{28}{34}\selectfont % Slightly larger body text since you have room
 #+END_EXPORT
 
-* 1. The "Mixed Bag" Challenge
-Parkinson's Disease (PD) is asynchronous. At any moment, the substantia nigra contains a mixture of healthy, compensating, and dying cells. Standard clustering forces cells into mutually exclusive groups based on **Global Similarity**, obscuring transitional failure modes.
+* 1. The Challenge: The "Mixed Bag"
+Standard clustering groups cells by Global Transcriptomic Identity,
+forcing cells into mutually exclusive groups. By ignoring the disease
+label of individual cells, this approach obscures specific functional
+failure modes that cut across neuronal subtypes.
 
-** The Objective
-To identify **robust, non-overlapping combinatorial rules** that define distinct cell states without prior biological assumptions.
 
-* 2. The Solution: GPU-Accelerated DSSD
-** Method: Diverse Subgroup Set Discovery
-We developed a custom Parallel Genetic Algorithm (GA) on **DAWN HPC**.
-- **Glass Box AI:** Unlike Neural Networks, the GA produces logic rules.
-- **Set Optimization:** Optimizes a *set* of rules simultaneously, penalizing overlap.
+**Objective:** To use GPU-accelerated Subgroup Discovery to find **robust combinatorial rules** that define these hidden states without prior biological assumptions.
 
-** Rigorous Validation
-- **Permutation Test:** 1,000 concurrent GPU searches ($p < 0.001$).
-- **Shadow Run:** Blinded re-discovery to prove exhaustiveness.
+* 2. The Solution: GPU-Accelerated Discovery
+To ensure robust biological signals, single-cell expression data was
+**Z-scored**, **donor-regressed**, and **discretized**. To tackle
+complexity, we developed a custom **Parallel Genetic Algorithm** to
+perform Diverse Subgroup Set Discovery (DSSD) on GPU architecture:
+
+- **Glass-Box AI:** Evolves human-readable logical rules (e.g., /IF Gene A AND NOT Gene B/).
+- **Set Optimization:** Optimizes a *portfolio* of rules simultaneously, penalizing overlap.
+- **High-Throughput:** Leveraged **~10,000 GPU hours** on the **DAWN AI Supercomputer** to perform massive parallel permutation testing, ensuring rigorous statistical validation.
 
 #+BEGIN_EXPORT latex
-% SIDE-BY-SIDE PLOTS (Taller to fill space)
+% --- FIGURE 1: METHOD & VALIDATION (Side-by-Side) ---
 \begin{center}
-    \begin{minipage}{0.48\linewidth}
-        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/fitness_histogram.png}
-        \captionof{figure}{Discovery Signal ($p < 0.001$).}
+    \begin{minipage}{0.58\linewidth}
+        % The Method Diagram
+        \includegraphics[width=\linewidth,height=12cm,keepaspectratio]{./images/GPU_GA.pdf}
+        \captionof{figure}{\textbf{The Discovery Engine.} Parallel evolution of rule sets.}
     \end{minipage}
     \hfill
-    \begin{minipage}{0.48\linewidth}
-        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/subgroup_analysis.png}
-        \captionof{figure}{Subgroup Composition.}
+    \begin{minipage}{0.38\linewidth}
+        % The Validation Histogram
+        \includegraphics[width=\linewidth,height=10cm,keepaspectratio]{./images/fitness_histogram.png}
+        \captionof{figure}{\textbf{Validation.} Signal vs Noise ($p < 0.001$).}
     \end{minipage}
 \end{center}
 #+END_EXPORT
 
-* 3. Discovery: A Triple Dissociation
-The framework decomposed the PD population into three mutually exclusive "Attractor States."
+* 3. Discovery: Three Distinct Failure Modes
+The DSSD framework identified three robust, distinct **"Functional States"** within the heterogeneous PD population.
 
-** Rule 1: Metabolic Compensation
-Loss of nuclear repressor /NCOR2/ triggers massive upregulation of Mitochondria.
-*Interpretation:* Cells fighting bioenergetic collapse.
-
-** Rule 2: Iron-Toxic Stress
-Defined by Ferritin (/FTH1/) and Alpha-Crystallin B (/CRYAB/), a chaperone that prevents aggregation.
-*Interpretation:* Cells managing toxic iron accumulation.
-
-** Rule 4: Fibrotic Senescence
-Enriched for /LINGO1/ (blocks repair) and /COL27A1/ (scarring).
-*Interpretation:* A terminal state of irreversible fibrosis.
 
 #+BEGIN_EXPORT latex
+% --- FIGURE 2: RULES & OVERLAP ---
 \begin{center}
-% Max Height increased to 28cm
-\includegraphics[width=1.0\linewidth,height=28cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/mechanism_heatmap.png}
-\captionof{figure}{Differential Enrichment Heatmap. Note the "staircase" pattern: Mitochondrial genes (Top Left) vs Fibrotic genes (Bottom Right).}
-\end{center}
-\columnbreak
-#+END_EXPORT
-
-* 4. Validation: Biological Ground Truth
-Validation against the Gene Ontology database confirmed the biological coherence of the discovered states.
-
-#+BEGIN_EXPORT latex
-\begin{center}
-% Max Height increased to 22cm
-\includegraphics[width=1.0\linewidth,height=22cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/pathway_validation_figure.png}
-\captionof{figure}{GO analysis confirms Rule 1 is Mitochondrial ($p < 10^{-20}$), Rule 2 is Iron/Translation, and Rule 4 is Fibrosis.}
+    \begin{minipage}{0.58\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/subgroup_analysis.png}
+        \captionof{figure}{Discovered Rules.}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.38\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/subgroup_overlap_venn.png}
+        \captionof{figure}{\textbf{Distinct States.} Minimal overlap.}
+    \end{minipage}
 \end{center}
 #+END_EXPORT
 
-* 5. The "Trajectory of Failure"
-We calculated the transcriptomic distance of each subgroup from a healthy control baseline to infer chronological progression.
+* 4. Biological Characterization
+Functional enrichment analysis (Enrichr) reveals that each subgroup is
+charaterized by distinct pathological mechanism, supporting the "Orthogonal Failure Mode" hypothesis.
+
+- **Rule 1 (Metabolic):** Characterized by a **bioenergetic collapse**, indicated by extreme enrichment for /Mitochondrial Myopathy/ and /Leigh Disease/ signatures ($P < 10^{-18}$).
+- **Rule 2 (Iron/Stress):** Defined by the dysregulation of **Iron Homeostasis** and /Secretory Granules/, pointing to specific lysosomal and vesicular toxicity.
+- **Rule 3 (Regeneration):** Displays a **"Frustrated Regeneration"** phenotype. The upregulation of acute injury factors (/EGR1/) and **Axon Guidance** machinery suggests an active attempt at structural repair.
 
 #+BEGIN_EXPORT latex
+% --- FIGURE 3: THE DOT PLOT ---
 \begin{center}
-% Max Height increased to 20cm
-\includegraphics[width=1.0\linewidth,height=20cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/trajectory_boxplot.png}
-\captionof{figure}{The Unified Model. Cells enter early stress states (Metabolic/Iron) before collapsing into the terminal Fibrotic state.}
+    \includegraphics[width=0.95\linewidth,height=18cm,keepaspectratio]{./images/PD_Enrichr_DotPlot_From_Files.png}
+    \captionof{figure}{\textbf{Deconvolution of Pathology.} Analysis against GO, Jensen Diseases, and TF databases reveals three non-overlapping mechanisms.}
 \end{center}
 #+END_EXPORT
 
-* 6. Impact: Functional States vs. Cell Identity
+* 5. Impact: Functional States vs. Identity
 Standard clustering groups cells by global transcriptomic identity. Our framework reveals states that are **orthogonal** to this identity.
 
 #+BEGIN_EXPORT latex
+% --- FIGURE 4: COMBINED UMAP + STRESS VIOLIN ---
 \begin{center}
-\includegraphics[width=0.95\linewidth,height=16cm,keepaspectratio]{/Users/samneaves/Documents/ga_gpu_dssd/writeup/images/rule2_combined_labeled.png}
-\captionof{figure}{The "Iron-Toxic" state (Red) cuts across multiple standard clusters (Grey), proving it is a functional state acquired by various lineages, not a static cell type.}
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/combined_umap_confetti.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=14cm,keepaspectratio]{./images/Violin_Stress_vs_OtherPD.png}
+    \end{minipage}
+    \captionof{figure}{\textbf{States are Orthogonal to Identity.} Left: Functional failure modes are scattered across diverse transcriptomic clusters. Right: These states represent a distinct, higher tier of cellular stress compared to the general PD background.}
 \end{center}
 #+END_EXPORT
 
-* Conclusion & Precision Medicine
-We have mapped the landscape of PD heterogeneity into three actionable
-states. This sheds light on why "one-size-fits-all" trials might ofail.
+#+BEGIN_EXPORT latex
+\columnbreak % FORCE BREAK TO SECOND COLUMN
+#+END_EXPORT
 
-1.  **Metabolic (Early):** Target for Mitochondrial Co-factors.
-2.  **Iron-Toxic (Early):** Target for Iron Chelation.
-3.  **Fibrotic (Terminal):** Target for Senolytics / Anti-LINGO1 therapies.
+* 6. Molecular & Regulatory Architecture
+We identified the specific signaling pathways and protein machinery
+assoicated with these states.
+
+** The "Regeneration" Machinery (Rule 3)
+STRING interaction analysis reveals that Rule 3 markers form a **coordinated structural remodeling network**, indicating active reorganization of the cell architecture.
+
+#+BEGIN_EXPORT latex
+% --- FIGURE 5: STRING NETWORK ---
+\begin{center}
+    \includegraphics[width=0.85\linewidth,height=25cm,keepaspectratio]{./images/string_normal_image.png}
+    \captionof{figure}{\textbf{Coordinated Repair Program.} The cytoskeletal regulator \textit{PALD1} is functionally coupled to the matrix remodeler \textit{ADAMTS14}, linking internal actin dynamics with external scaffolding.}
+\end{center}
+#+END_EXPORT
+
+** Distinct Regulatory Architectures
+We explored specific signaling pathways of interest by calculating single-cell module scores. This analysis characterizes the distinct regulatory profile associated with each failure mode.
+
+#+BEGIN_EXPORT latex
+% --- FIGURE 6: PATHWAY VIOLINS (Pyramid Layout) ---
+\begin{center}
+    % ROW 1: The Drivers
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_dan3_regulon_TCF7L2_targets.png}
+        \centerline{\small \textbf{Rule 4: TCF7L2 (Regeneration)}}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_mapk_genes_in_wikipathways_txt.png}
+        \centerline{\small \textbf{Rule 2: MAPK (Stress)}}
+    \end{minipage}
+    
+    \vspace{0.5cm} 
+    
+    % ROW 2: The Consequence
+    \begin{minipage}{0.48\linewidth}
+        \includegraphics[width=\linewidth,height=16cm,keepaspectratio]{./images/Violin_DopamineKEGGpathway_txt.png}
+        \centerline{\small \textbf{Rule 1: Dopamine (Metabolic)}}
+    \end{minipage}
+    
+    \captionof{figure}{\textbf{Distinct Signaling Mechanisms.} \textit{TCF7L2} (Wnt) is upregulated in Rule 4. ($P<0.001$). \textit{MAPK} drives Rule 2 ($P<0.05$). \textit{Dopamine Metabolism} is downregulated in Rule 1 ($P<0.01$).}
+\end{center}
+#+END_EXPORT
+* 7. Pseudotime Dynamics
+We mapped the subgroups onto a pseudotime disease trajectory.
+
+#+BEGIN_EXPORT latex
+% --- FIGURE 7: PSEUDOTIME DENSITY ---
+\begin{center}
+    \includegraphics[width=0.95\linewidth,height=18
+    cm,keepaspectratio]{./images/PD_Pseudotime_Chronology.png}
+    \captionof{figure}{\textbf{Disease Progression Landscape.} Metabolic dysfunction (Rule 1) presents as a broad baseline signal. The \textbf{Regenerative State (Rule 4)} is sharply localized to advanced pseudotime, followed by the peak density of \textbf{Iron Toxicity (Rule 2)}, suggesting these are distinct late-stage phenomena.}
+\end{center}
+#+END_EXPORT
+
+
+* Conclusion
+We have mapped the regulatory crosstalk of PD into three potentially actionable states:
+
+1.  **Metabolic (Baseline):** Mitochondrial support.
+2.  **Iron-Toxic (Acute):** Marked by MAPK and functional demand.
+3.  **Regenerative (Structural):** A coordinated but frustrated attempt at repair linked to TCF7L2.
 
 #+BEGIN_EXPORT latex
 \end{multicols}

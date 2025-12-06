@@ -1,0 +1,22 @@
+Welcome to MAGMA v1.10 (custom)
+Using flags:
+	--bfile /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR
+	--gene-annot ieu_b7_PD_annot.genes.annot
+	--pval /Users/samneaves/Documents/gwas_catalog/opengwas/ieu-b-7_for_magma.txt N=482730
+	--out ieu_b7_PD_gene
+
+Start time is 15:31:04, Friday 05 Dec 2025
+
+Loading PLINK-format data...
+Reading file /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR.fam... 503 individuals read
+Reading file /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR.bim... 25063419 SNPs read
+Preparing file /Users/samneaves/Documents/gwas_catalog/magma_1000g_37_europe_ref/EUR.bed... 
+
+Reading SNP p-values from file /Users/samneaves/Documents/gwas_catalog/opengwas/ieu-b-7_for_magma.txt... 
+	detected 2 variables in file
+	using variable: SNP (SNP id)
+	using variable: P (p-value)
+
+ERROR - reading p-value file: no valid p-values found for any SNPs in the data
+
+Terminating program.
